@@ -122,8 +122,8 @@ runs:
           ${{ inputs.bin-name-no-suffix == 'true' && '--bin-name-no-suffix' || '' }} \
           ${{ inputs.more-go-cmd-args != '' && format('--more-go-cmd-args=''{0}''', inputs.more-go-cmd-args) || '' }} \
           ${{ inputs.targets != '' && format('--targets=''{0}''', inputs.targets) || '' }} \
-          ${{ inputs.disable-cgo != 'false' && '--disable-cgo' || '' }} \
-          ${{ inputs.force-cgo != 'false' && '--force-cgo' || '' }} \
+          ${{ inputs.disable-cgo == 'true' && '--disable-cgo' || '' }} \
+          ${{ inputs.force-cgo == 'true' && '--force-cgo' || '' }} \
           ${{ inputs.force-gcc != '' && format('--force-gcc=''{0}''', inputs.force-gcc) || '' }} \
           ${{ inputs.force-gxx != '' && format('--force-gxx=''{0}''', inputs.force-gxx) || '' }} \
           ${{ inputs.host-gcc != '' && format('--host-gcc=''{0}''', inputs.host-gcc) || '' }} \
