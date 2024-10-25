@@ -97,14 +97,16 @@ runs:
       shell: bash
       run: |
         targets=${{ inputs.show-all-targets != 'true' && inputs.show-all-targets || '' }}
+        targets_output=$(BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" --show-all-targets${targets:+"=${targets}"})
+        echo "$targets_output"
         declare -a arr=()
         OIFS="$IFS"
         IFS=\n,'
-        for line in $(BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" --show-all-targets${targets:+"=${targets}"}); do
+        for line in $targets_output; do
+          echo "line=$line"
           arr+=("$line")
         done
         IFS="$OIFS"
-        echo "${arr[@]}"
         printf -v json '"%s",' "${arr[@]}"
         json="[${json%,}]"
         echo "targets=$json" >> $GITHUB_OUTPUT
