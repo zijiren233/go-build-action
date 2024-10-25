@@ -17,28 +17,31 @@ jobs:
 ```yaml
 jobs:
   get-targets:
+    name: Get targets
     runs-on: ubuntu-latest
     outputs:
-      targets: ${{ steps.get_all_targets.outputs.targets }}
+      targets: ${{ steps.get-targets.outputs.targets }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get All Targets
+      - name: Get targets
+        id: get-targets
         uses: zijiren233/go-build-action@main
         with:
           show-all-targets: true
           # show-all-targets: linux/*,windows/*
 
   build-targets:
+    name: Build targets
     runs-on: ubuntu-latest
     needs: get-targets
     strategy:
       matrix:
-        target: ${{ fromJson(needs.get_all_targets.outputs.targets) }}
+        target: ${{ fromJson(needs.get-targets.outputs.targets) }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Targets
+      - name: Build targets
         uses: zijiren233/go-build-action@main
         with:
           targets: ${{ matrix.target }}
