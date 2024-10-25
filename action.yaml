@@ -115,26 +115,26 @@ runs:
       shell: bash
       run: |
         BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" \
-          ${{ inputs.source-dir != '' && format('--source-dir={0}', inputs.source-dir) || '' }} \
-          ${{ inputs.result-dir != '' && format('--result-dir={0}', inputs.result-dir) || '' }} \
-          ${{ inputs.build-mode != '' && format('--build-mode={0}', inputs.build-mode) || '' }} \
-          ${{ inputs.bin-name != '' && format('--bin-name={0}', inputs.bin-name) || '' }} \
+          ${{ inputs.source-dir != '' && format('--source-dir=''{0}''', inputs.source-dir) || '' }} \
+          ${{ inputs.result-dir != '' && format('--result-dir=''{0}''', inputs.result-dir) || '' }} \
+          ${{ inputs.build-mode != '' && format('--build-mode=''{0}''', inputs.build-mode) || '' }} \
+          ${{ inputs.bin-name != '' && format('--bin-name=''{0}''', inputs.bin-name) || '' }} \
           ${{ inputs.bin-name-no-suffix == 'true' && '--bin-name-no-suffix' || '' }} \
           ${{ inputs.more-go-cmd-args != '' && format('--more-go-cmd-args=''{0}''', inputs.more-go-cmd-args) || '' }} \
-          ${{ inputs.targets != '' && format('--targets={0}', inputs.targets) || '' }} \
+          ${{ inputs.targets != '' && format('--targets=''{0}''', inputs.targets) || '' }} \
           ${{ inputs.disable-cgo != 'false' && '--disable-cgo' || '' }} \
           ${{ inputs.force-cgo != 'false' && '--force-cgo' || '' }} \
-          ${{ inputs.force-gcc != '' && format('--force-gcc={0}', inputs.force-gcc) || '' }} \
-          ${{ inputs.force-gxx != '' && format('--force-gxx={0}', inputs.force-gxx) || '' }} \
-          ${{ inputs.host-gcc != '' && format('--host-gcc={0}', inputs.host-gcc) || '' }} \
-          ${{ inputs.host-gxx != '' && format('--host-gxx={0}', inputs.host-gxx) || '' }} \
-          ${{ inputs.cgo-flags != '' && format('--cgo-flags={0}', inputs.cgo-flags) || '' }} \
-          ${{ inputs.cgo-ldflags != '' && format('--cgo-ldflags={0}', inputs.cgo-ldflags) || '' }} \
-          ${{ inputs.tags != '' && format('--tags={0}', inputs.tags) || '' }} \
-          ${{ inputs.ldflags != '' && format('--ldflags={0}', inputs.ldflags) || '' }} \
-          ${{ inputs.ext-ldflags != '' && format('--ext-ldflags={0}', inputs.ext-ldflags) || '' }} \
-          ${{ inputs.github-proxy-mirror != '' && format('--github-proxy-mirror={0}', inputs.github-proxy-mirror) || '' }} \
-          ${{ inputs.cross-compiler-dir != '' && format('--cross-compiler-dir={0}', inputs.cross-compiler-dir) || '' }} \
-          ${{ inputs.ndk-version != '' && format('--ndk-version={0}', inputs.ndk-version) || '' }} \
+          ${{ inputs.force-gcc != '' && format('--force-gcc=''{0}''', inputs.force-gcc) || '' }} \
+          ${{ inputs.force-gxx != '' && format('--force-gxx=''{0}''', inputs.force-gxx) || '' }} \
+          ${{ inputs.host-gcc != '' && format('--host-gcc=''{0}''', inputs.host-gcc) || '' }} \
+          ${{ inputs.host-gxx != '' && format('--host-gxx=''{0}''', inputs.host-gxx) || '' }} \
+          ${{ inputs.cgo-flags != '' && format('--cgo-flags=''{0}''', inputs.cgo-flags) || '' }} \
+          ${{ inputs.cgo-ldflags != '' && format('--cgo-ldflags=''{0}''', inputs.cgo-ldflags) || '' }} \
+          ${{ inputs.tags != '' && format('--tags=''{0}''', inputs.tags) || '' }} \
+          ${{ inputs.ldflags != '' && format('--ldflags=''{0}''', inputs.ldflags) || '' }} \
+          ${{ inputs.ext-ldflags != '' && format('--ext-ldflags=''{0}''', inputs.ext-ldflags) || '' }} \
+          ${{ inputs.github-proxy-mirror != '' && format('--github-proxy-mirror=''{0}''', inputs.github-proxy-mirror) || '' }} \
+          ${{ inputs.cross-compiler-dir != '' && format('--cross-compiler-dir=''{0}''', inputs.cross-compiler-dir) || '' }} \
+          ${{ inputs.ndk-version != '' && format('--ndk-version=''{0}''', inputs.ndk-version) || '' }} \
           ${{ inputs.enable-micro == 'true' && '--enable-micro' || '' }} \
-          ${{ inputs.config-args != '' && format('--config-args={0}', inputs.config-args) || '' }}
+          ${{ inputs.config-args != '' && inputs.config-args || '' }}
