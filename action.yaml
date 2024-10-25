@@ -120,7 +120,7 @@ runs:
           ${{ inputs.build-mode != '' && format('--build-mode={0}', inputs.build-mode) || '' }} \
           ${{ inputs.bin-name != '' && format('--bin-name={0}', inputs.bin-name) || '' }} \
           ${{ inputs.bin-name-no-suffix == 'true' && '--bin-name-no-suffix' || '' }} \
-          ${{ inputs.more-go-cmd-args != '' && format('--more-go-cmd-args={0}', inputs.more-go-cmd-args) || '' }} \
+          ${{ inputs.more-go-cmd-args != '' && format('--more-go-cmd-args=\'{0}\'', inputs.more-go-cmd-args) || '' }} \
           ${{ inputs.targets != '' && format('--targets={0}', inputs.targets) || '' }} \
           ${{ inputs.disable-cgo != 'false' && '--disable-cgo' || '' }} \
           ${{ inputs.force-cgo != 'false' && '--force-cgo' || '' }} \
