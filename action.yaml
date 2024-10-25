@@ -76,7 +76,6 @@ inputs:
   enable-micro:
     description: "Enable building micro architecture variants"
     required: false
-    default: "false"
   show-all-targets:
     description: "Show all supported targets"
     required: false
@@ -97,6 +96,8 @@ runs:
       if: ${{ inputs.show-all-targets != 'false' }}
       shell: bash
       run: |
+        pwd
+        ls -la
         targets=${{ inputs.show-all-targets == 'true' && '' || inputs.show-all-targets }}
         declare -a arr=()
         OIFS="$IFS"
