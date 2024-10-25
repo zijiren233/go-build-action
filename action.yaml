@@ -1,0 +1,139 @@
+name: "Go Build"
+description: "A configurable GitHub Action to build Go projects with cross-compilation support"
+
+branding:
+  icon: "play"
+  color: "green"
+
+inputs:
+  source-dir:
+    description: "The directory containing the Go project to build"
+    required: false
+    default: ${{ github.workspace }}
+  result-dir:
+    description: "The directory to store build results"
+    required: false
+  build-config:
+    description: "The path to the build configuration file"
+    required: false
+  build-mode:
+    description: "Build mode (default, archive, shared, c-archive, c-shared)"
+    required: false
+  bin-name:
+    description: "Name of the output binary"
+    required: false
+  bin-name-no-suffix:
+    description: "Do not append architecture suffix to binary name"
+    required: false
+  more-go-cmd-args:
+    description: "Additional Go command arguments"
+    required: false
+  targets:
+    description: "Target targets to build for (e.g. linux/amd64,windows/386)"
+    required: false
+  disable-cgo:
+    description: "Disable CGO"
+    required: false
+  force-cgo:
+    description: "Force use of CGO"
+    required: false
+  force-gcc:
+    description: "Force specific C compiler"
+    required: false
+  force-gxx:
+    description: "Force specific C++ compiler"
+    required: false
+  host-gcc:
+    description: "Host C compiler path"
+    required: false
+  host-gxx:
+    description: "Host C++ compiler path"
+    required: false
+  cgo-flags:
+    description: "CGO compiler flags"
+    required: false
+  cgo-ldflags:
+    description: "CGO linker flags"
+    required: false
+  ldflags:
+    description: "Go linker flags"
+    required: false
+  ext-ldflags:
+    description: "External linker flags"
+    required: false
+  tags:
+    description: "Build tags"
+    required: false
+  github-proxy-mirror:
+    description: "GitHub proxy mirror URL for downloading cross compilers"
+    required: false
+  cross-compiler-dir:
+    description: "Directory to store cross compilers"
+    required: false
+  ndk-version:
+    description: "Android NDK version for Android builds"
+    required: false
+  enable-micro:
+    description: "Enable building micro architecture variants"
+    required: false
+    default: "false"
+  show-all-targets:
+    description: "Show all supported targets"
+    required: false
+    default: "false"
+  config-args:
+    description: "Additional build configuration arguments"
+    required: false
+
+outputs:
+  targets:
+    description: "All supported targets"
+    value: ${{ steps.get_targets.outputs.targets }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: get_targets
+      if: ${{ inputs.show-all-targets != 'false' }}
+      shell: bash
+      run: |
+        targets=${{ inputs.show-all-targets == 'true' && '' || inputs.show-all-targets }}
+        declare -a arr=()
+        OIFS="$IFS"
+        IFS=\n,'
+        for line in $(BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" --show-all-targets${targets:+"=${targets}"}); do
+          arr+=("$line")
+        done
+        IFS="$OIFS"
+        printf -v json '"%s",' "${arr[@]}"
+        json="[${json%,}]"
+        echo "targets=$json" >> $GITHUB_OUTPUT
+
+    - id: build
+      if: ${{ inputs.show-all-targets == 'false' }}
+      shell: bash
+      run: |
+        BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" \
+          ${{ inputs.source-dir && "--source-dir=${{ inputs.source-dir }}" || '' }} \
+          ${{ inputs.result-dir && "--result-dir=${{ inputs.result-dir }}" || '' }} \
+          ${{ inputs.build-mode && "--build-mode=${{ inputs.build-mode }}" || '' }} \
+          ${{ inputs.bin-name && "--bin-name=${{ inputs.bin-name }}" || '' }} \
+          ${{ inputs.bin-name-no-suffix == 'true' && '--bin-name-no-suffix' || '' }} \
+          ${{ inputs.more-go-cmd-args && "--more-go-cmd-args=${{ inputs.more-go-cmd-args }}" || '' }} \
+          ${{ inputs.targets && "--targets=${{ inputs.targets }}" || '' }} \
+          ${{ inputs.disable-cgo != 'false' && '--disable-cgo' || '' }} \
+          ${{ inputs.force-cgo != 'false' && '--force-cgo' || '' }} \
+          ${{ inputs.force-gcc && "--force-gcc=${{ inputs.force-gcc }}" || '' }} \
+          ${{ inputs.force-gxx && "--force-gxx=${{ inputs.force-gxx }}" || '' }} \
+          ${{ inputs.host-gcc && "--host-gcc=${{ inputs.host-gcc }}" || '' }} \
+          ${{ inputs.host-gxx && "--host-gxx=${{ inputs.host-gxx }}" || '' }} \
+          ${{ inputs.cgo-flags && "--cgo-flags=${{ inputs.cgo-flags }}" || '' }} \
+          ${{ inputs.cgo-ldflags && "--cgo-ldflags=${{ inputs.cgo-ldflags }}" || '' }} \
+          ${{ inputs.tags && "--tags=${{ inputs.tags }}" || '' }} \
+          ${{ inputs.ldflags && "--ldflags=${{ inputs.ldflags }}" || '' }} \
+          ${{ inputs.ext-ldflags && "--ext-ldflags=${{ inputs.ext-ldflags }}" || '' }} \
+          ${{ inputs.github-proxy-mirror && "--github-proxy-mirror=${{ inputs.github-proxy-mirror }}" || '' }} \
+          ${{ inputs.cross-compiler-dir && "--cross-compiler-dir=${{ inputs.cross-compiler-dir }}" || '' }} \
+          ${{ inputs.ndk-version && "--ndk-version=${{ inputs.ndk-version }}" || '' }} \
+          ${{ inputs.enable-micro == 'true' && '--enable-micro' || '' }} \
+          ${{ inputs.config-args && "--config-args=${{ inputs.config-args }}" || '' }}
