@@ -269,7 +269,8 @@ function removeDuplicateTargets() {
 # Arguments:
 #   $1: Comma-separated list of targets to add.
 function addAllowedTargets() {
-    [[ -z "$ALLOWED_PLATFORMS" ]] && ALLOWED_PLATFORMS="$1" || ALLOWED_PLATFORMS=$(removeDuplicateTargets "$ALLOWED_PLATFORMS,$1")
+    local targets="${1// /,}"
+    [[ -z "$ALLOWED_PLATFORMS" ]] && ALLOWED_PLATFORMS="$targets" || ALLOWED_PLATFORMS=$(removeDuplicateTargets "$ALLOWED_PLATFORMS,$targets")
 }
 
 # Removes targets from the allowed targets list.
