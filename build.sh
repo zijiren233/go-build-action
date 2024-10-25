@@ -259,7 +259,7 @@ function downloadAndUnzip() {
 #   Comma-separated list of targets with duplicates removed.
 function removeDuplicateTargets() {
     local all_targets="$1"
-    all_targets="$(echo "${all_targets}" | tr ',' '\n' | sort | uniq | paste -s -d ',' -)"
+    all_targets="$(echo "${all_targets}" | tr ', ' '\n' | sort | uniq | paste -s -d ',' -)"
     all_targets="${all_targets#,}"
     all_targets="${all_targets%,}"
     echo "${all_targets}"
@@ -269,8 +269,7 @@ function removeDuplicateTargets() {
 # Arguments:
 #   $1: Comma-separated list of targets to add.
 function addAllowedTargets() {
-    local targets="${1// /,}"
-    [[ -z "$ALLOWED_PLATFORMS" ]] && ALLOWED_PLATFORMS="$targets" || ALLOWED_PLATFORMS=$(removeDuplicateTargets "$ALLOWED_PLATFORMS,$targets")
+    ALLOWED_PLATFORMS=$(removeDuplicateTargets "$ALLOWED_PLATFORMS,$1")
 }
 
 # Removes targets from the allowed targets list.
@@ -630,8 +629,8 @@ function initIosCGO() {
         # FIXME: use ios sdk
         case "${GOHOSTARCH}" in
         "amd64")
-            local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}')
-            local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}')
+            local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+            local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
             local cc=${!cc_var}
             local cxx=${!cxx_var}
             if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
@@ -705,8 +704,8 @@ function initOsxCGO() {
     "linux")
         case "${GOHOSTARCH}" in
         "amd64")
-            local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}')
-            local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}')
+            local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+            local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
             local cc=${!cc_var}
             local cxx=${!cxx_var}
             if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
@@ -761,8 +760,8 @@ function initLinuxCGO() {
     local arch_prefix="$1"
     local abi="$2"
     local micro="$3"
-    local cc_var=$(echo "CC_LINUX_${arch_prefix}${abi}${micro}" | awk '{print tolower($0)}')
-    local cxx_var=$(echo "CXX_LINUX_${arch_prefix}${abi}${micro}" | awk '{print tolower($0)}')
+    local cc_var=$(echo "CC_LINUX_${arch_prefix}${abi}${micro}" | awk '{print tolower($0)}' | tr '-' '_')
+    local cxx_var=$(echo "CXX_LINUX_${arch_prefix}${abi}${micro}" | awk '{print tolower($0)}' | tr '-' '_')
     local cc=${!cc_var}
     local cxx=${!cxx_var}
 
@@ -796,8 +795,8 @@ function initLinuxCGO() {
 #   $1: Architecture prefix (e.g., "i686", "x86_64").
 function initWindowsCGO() {
     local arch_prefix="$1"
-    local cc_var=$(echo "CC_WINDOWS_${arch_prefix}" | awk '{print tolower($0)}')
-    local cxx_var=$(echo "CXX_WINDOWS_${arch_prefix}" | awk '{print tolower($0)}')
+    local cc_var=$(echo "CC_WINDOWS_${arch_prefix}" | awk '{print tolower($0)}' | tr '-' '_')
+    local cxx_var=$(echo "CXX_WINDOWS_${arch_prefix}" | awk '{print tolower($0)}' | tr '-' '_')
     local cc=${!cc_var}
     local cxx=${!cxx_var}
 
