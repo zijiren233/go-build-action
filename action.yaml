@@ -104,6 +104,7 @@ runs:
           arr+=("$line")
         done
         IFS="$OIFS"
+        echo "${arr[@]}"
         printf -v json '"%s",' "${arr[@]}"
         json="[${json%,}]"
         echo "targets=$json" >> $GITHUB_OUTPUT
