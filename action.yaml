@@ -96,7 +96,7 @@ runs:
       if: ${{ inputs.show-all-targets != 'false' }}
       shell: bash
       run: |
-        targets=${{ inputs.show-all-targets && '' || inputs.show-all-targets }}
+        targets=${{ inputs.show-all-targets != 'true' && inputs.show-all-targets || '' }}
         declare -a arr=()
         OIFS="$IFS"
         IFS=\n,'
