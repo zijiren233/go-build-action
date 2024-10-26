@@ -31,6 +31,7 @@ readonly DEFAULT_EXT_LDFLAGS=""
 readonly DEFAULT_CGO_DEPS_VERSION="v0.5.2"
 readonly DEFAULT_TTY_WIDTH="40"
 readonly DEFAULT_NDK_VERSION="r27"
+readonly DEFAULT_GO_CLEAN_CACHE="false"
 
 # Go environment variables
 readonly GOHOSTOS="$(go env GOHOSTOS)"
@@ -66,6 +67,7 @@ function printEnvHelp() {
     echo -e "  ${COLOR_LIGHT_CYAN}FORCE_CGO${COLOR_RESET}          - Force the use of CGO (default: ${DEFAULT_FORCE_CGO})"
     echo -e "  ${COLOR_LIGHT_CYAN}FORCE_CXX${COLOR_RESET}          - Force the use of a specific C++ compiler"
     echo -e "  ${COLOR_LIGHT_CYAN}GH_PROXY${COLOR_RESET}           - Set the GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
+    echo -e "  ${COLOR_LIGHT_CYAN}GO_CLEAN_CACHE${COLOR_RESET}      - Clean Go build cache before building (default: ${DEFAULT_GO_CLEAN_CACHE})"
     echo -e "  ${COLOR_LIGHT_CYAN}HOST_CC${COLOR_RESET}            - Set the host C compiler (default: ${DEFAULT_CC})"
     echo -e "  ${COLOR_LIGHT_CYAN}HOST_CXX${COLOR_RESET}           - Set the host C++ compiler (default: ${DEFAULT_CXX})"
     echo -e "  ${COLOR_LIGHT_CYAN}NDK_VERSION${COLOR_RESET}        - Set the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
@@ -98,6 +100,7 @@ function printHelp() {
     echo -e "  ${COLOR_LIGHT_BLUE}--force-gcc=<path>${COLOR_RESET}             - Force the use of a specific C compiler"
     echo -e "  ${COLOR_LIGHT_BLUE}--force-gxx=<path>${COLOR_RESET}             - Force the use of a specific C++ compiler"
     echo -e "  ${COLOR_LIGHT_BLUE}--github-proxy-mirror=<url>${COLOR_RESET}    - Use a GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
+    echo -e "  ${COLOR_LIGHT_BLUE}--go-clean-cache${COLOR_RESET}               - Clean Go build cache before building"
     echo -e "  ${COLOR_LIGHT_BLUE}-h, --help${COLOR_RESET}                     - Display this help message"
     echo -e "  ${COLOR_LIGHT_BLUE}--host-gcc=<path>${COLOR_RESET}              - Specify the host C compiler (default: ${DEFAULT_CC})"
     echo -e "  ${COLOR_LIGHT_BLUE}--host-gxx=<path>${COLOR_RESET}              - Specify the host C++ compiler (default: ${DEFAULT_CXX})"
@@ -185,6 +188,7 @@ function fixArgs() {
     setDefault "CGO_FLAGS" "${DEFAULT_CGO_FLAGS}"
     setDefault "CGO_LDFLAGS" "${DEFAULT_CGO_LDFLAGS}"
     setDefault "NDK_VERSION" "${DEFAULT_NDK_VERSION}"
+    setDefault "GO_CLEAN_CACHE" "${DEFAULT_GO_CLEAN_CACHE}"
 }
 
 # Checks if CGO is enabled.
@@ -1052,6 +1056,11 @@ function buildTargetWithMicro() {
 
     echo -e "${COLOR_LIGHT_MAGENTA}Building ${goos}/${goarch}${micro:+/${micro}}...${COLOR_RESET}"
 
+    if [[ "${GO_CLEAN_CACHE}" == "true" ]]; then
+        echo -e "${COLOR_LIGHT_BLUE}Cleaning Go build cache...${COLOR_RESET}"
+        go clean -cache
+    fi
+
     if isCGOEnabled; then
         if initCGODeps "${goos}" "${_goarch}" "${micro}"; then
             code=0
@@ -1254,6 +1263,9 @@ while [[ $# -gt 0 ]]; do
         ;;
     --ndk-version=*)
         NDK_VERSION="${1#*=}"
+        ;;
+    --go-clean-cache)
+        GO_CLEAN_CACHE="true"
         ;;
     *)
         if declare -f parseDepArgs >/dev/null && parseDepArgs "$1"; then

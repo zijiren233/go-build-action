@@ -73,6 +73,9 @@ inputs:
   ndk-version:
     description: "Android NDK version for Android builds"
     required: false
+  go-clean-cache:
+    description: "Clean Go build cache before building"
+    required: false
   enable-micro:
     description: "Enable building micro architecture variants"
     required: false
@@ -136,5 +139,6 @@ runs:
           ${{ inputs.github-proxy-mirror != '' && format('--github-proxy-mirror=''{0}''', inputs.github-proxy-mirror) || '' }} \
           ${{ inputs.cross-compiler-dir != '' && format('--cross-compiler-dir=''{0}''', inputs.cross-compiler-dir) || '' }} \
           ${{ inputs.ndk-version != '' && format('--ndk-version=''{0}''', inputs.ndk-version) || '' }} \
+          ${{ inputs.go-clean-cache == 'true' && '--go-clean-cache' || '' }} \
           ${{ inputs.enable-micro == 'true' && '--enable-micro' || '' }} \
           ${{ inputs.config-args != '' && inputs.config-args || '' }}
