@@ -18,7 +18,7 @@ readonly COLOR_RESET='\033[0m'
 readonly DEFAULT_SOURCE_DIR="$(pwd)"
 readonly DEFAULT_RESULT_DIR="${DEFAULT_SOURCE_DIR}/build"
 readonly DEFAULT_BUILD_CONFIG="${DEFAULT_SOURCE_DIR}/build.config.sh"
-readonly DEFAULT_BUILD_MODE="default"
+readonly DEFAULT_BUILDMODE="default"
 readonly DEFAULT_CGO_ENABLED="1"
 readonly DEFAULT_FORCE_CGO="0"
 readonly DEFAULT_CC="gcc"
@@ -56,7 +56,7 @@ function printEnvHelp() {
     echo -e "  ${COLOR_LIGHT_CYAN}BIN_NAME${COLOR_RESET}           - Set the binary name (default: source directory basename)"
     echo -e "  ${COLOR_LIGHT_CYAN}BIN_NAME_NO_SUFFIX${COLOR_RESET} - Do not append the architecture suffix to the binary name"
     echo -e "  ${COLOR_LIGHT_CYAN}BUILD_CONFIG${COLOR_RESET}       - Set the build configuration file (default: ${DEFAULT_BUILD_CONFIG})"
-    echo -e "  ${COLOR_LIGHT_CYAN}BUILD_MODE${COLOR_RESET}         - Set the build mode (default: ${DEFAULT_BUILD_MODE})"
+    echo -e "  ${COLOR_LIGHT_CYAN}BUILDMODE${COLOR_RESET}         - Set the build mode (default: ${DEFAULT_BUILDMODE})"
     echo -e "  ${COLOR_LIGHT_CYAN}CGO_ENABLED${COLOR_RESET}        - Enable or disable CGO (default: ${DEFAULT_CGO_ENABLED})"
     echo -e "  ${COLOR_LIGHT_CYAN}CGO_FLAGS${COLOR_RESET}          - Set CGO flags (default: ${DEFAULT_CGO_FLAGS})"
     echo -e "  ${COLOR_LIGHT_CYAN}CGO_LDFLAGS${COLOR_RESET}        - Set CGO linker flags (default: ${DEFAULT_CGO_LDFLAGS})"
@@ -88,7 +88,7 @@ function printHelp() {
     echo -e "${COLOR_LIGHT_RED}Options:${COLOR_RESET}"
     echo -e "  ${COLOR_LIGHT_BLUE}--bin-name=<name>${COLOR_RESET}              - Specify the binary name (default: source directory basename)"
     echo -e "  ${COLOR_LIGHT_BLUE}--bin-name-no-suffix${COLOR_RESET}           - Do not append the architecture suffix to the binary name"
-    echo -e "  ${COLOR_LIGHT_BLUE}--build-mode=<mode>${COLOR_RESET}            - Set the build mode (default: ${DEFAULT_BUILD_MODE})"
+    echo -e "  ${COLOR_LIGHT_BLUE}--buildmode=<mode>${COLOR_RESET}            - Set the build mode (default: ${DEFAULT_BUILDMODE})"
     echo -e "  ${COLOR_LIGHT_BLUE}--cross-compiler-dir=<dir>${COLOR_RESET}     - Specify the cross compiler directory (default: ${DEFAULT_CROSS_COMPILER_DIR})"
     echo -e "  ${COLOR_LIGHT_BLUE}--disable-cgo${COLOR_RESET}                  - Disable CGO support"
     echo -e "  ${COLOR_LIGHT_BLUE}-eh, --env-help${COLOR_RESET}                - Display help information about environment variables"
@@ -169,7 +169,7 @@ function fixArgs() {
 
     setDefault "CROSS_COMPILER_DIR" "$DEFAULT_CROSS_COMPILER_DIR"
     setDefault "PLATFORMS" "${GOHOSTPLATFORM}"
-    setDefault "BUILD_MODE" "${DEFAULT_BUILD_MODE}"
+    setDefault "BUILDMODE" "${DEFAULT_BUILDMODE}"
     setDefault "ENABLE_MICRO" ""
     setDefault "FORCE_CGO" "${DEFAULT_FORCE_CGO}"
     setDefault "HOST_CC" "${DEFAULT_CC}"
@@ -1011,7 +1011,7 @@ function buildTargetWithMicro() {
         "GOOS=${goos}"
         "GOARCH=${goarch}"
     )
-    local buildmode=$BUILD_MODE
+    local buildmode=$BUILDMODE
     local ext=$(extension "${goos}" "${buildmode}")
     local target_file="${RESULT_DIR}/${BIN_NAME}"
     [ -z "$BIN_NAME_NO_SUFFIX" ] && target_file="${target_file}-${goos}-${_goarch}${micro:+"-${micro//[.,]/-}"}" || true
@@ -1185,8 +1185,8 @@ while [[ $# -gt 0 ]]; do
         printEnvHelp
         exit 0
         ;;
-    --build-mode=*)
-        BUILD_MODE="${1#*=}"
+    --buildmode=*)
+        BUILDMODE="${1#*=}"
         ;;
     --disable-cgo)
         disableCGO

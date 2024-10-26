@@ -16,7 +16,7 @@ inputs:
   build-config:
     description: "The path to the build configuration file"
     required: false
-  build-mode:
+  buildmode:
     description: "Build mode (default, archive, shared, c-archive, c-shared)"
     required: false
   bin-name:
@@ -117,7 +117,7 @@ runs:
         BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" \
           ${{ inputs.source-dir != '' && format('--source-dir=''{0}''', inputs.source-dir) || '' }} \
           ${{ inputs.result-dir != '' && format('--result-dir=''{0}''', inputs.result-dir) || '' }} \
-          ${{ inputs.build-mode != '' && format('--build-mode=''{0}''', inputs.build-mode) || '' }} \
+          ${{ inputs.buildmode != '' && format('--buildmode=''{0}''', inputs.buildmode) || '' }} \
           ${{ inputs.bin-name != '' && format('--bin-name=''{0}''', inputs.bin-name) || '' }} \
           ${{ inputs.bin-name-no-suffix == 'true' && '--bin-name-no-suffix' || '' }} \
           ${{ inputs.more-go-cmd-args != '' && format('--more-go-cmd-args=''{0}''', inputs.more-go-cmd-args) || '' }} \
