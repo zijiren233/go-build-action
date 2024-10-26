@@ -7,6 +7,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+
       - name: Go Build
         uses: zijiren233/go-build-action@v1
         with:
@@ -41,6 +46,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+
       - name: Build targets
         uses: zijiren233/go-build-action@v1
         with:
@@ -48,5 +58,5 @@ jobs:
 ```
 
 ```bash
-curl -sL https://github.com/zijiren233/go-build-action/releases/download/v1/build.sh | bash -s -- --show-all-targets
+curl -sL https://raw.githubusercontent.com/zijiren233/go-build-action/refs/tags/v1/build.sh | bash -s -- --show-all-targets
 ```
