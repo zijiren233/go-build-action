@@ -913,7 +913,7 @@ function buildTarget() {
     fi
 
     # Build micro architecture variants based on the target architecture.
-    case "${goarch}" in
+    case "${goarch%%-*}" in
     "386")
         echo
         buildTargetWithMicro "${goos}" "${goarch}" "sse2"
