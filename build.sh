@@ -1286,6 +1286,7 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+echo -e "${COLOR_LIGHT_GREEN}Working directory: $(pwd)${COLOR_RESET}"
 if loadedBuildConfig; then
     echo -e "${COLOR_LIGHT_GREEN}Loaded build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
 fi
