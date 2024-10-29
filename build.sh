@@ -1117,7 +1117,7 @@ function buildTargetWithMicro() {
 #   Comma-separated list of expanded targets.
 function expandTargets() {
     local targets="$1"
-    IFS=, read -r -a targets <<< "${targets}"
+    IFS=, read -r -a targets <<<"${targets}"
     local expanded_targets=""
     for target in "${targets[@]}"; do
         if [[ "${target}" == "all" ]] || [[ "${target}" == '*' ]]; then
@@ -1163,20 +1163,26 @@ function autoBuild() {
 
 # Checks if the build configuration file has been loaded.
 # Returns:
-#   0: Build configuration file has been loaded.
-#   1: Build configuration file has not been loaded.
+#   0: Build configuration file has not been loaded.
+#   1: Build configuration file has been loaded.
 function loadedBuildConfig() {
-    if [[ -n "${load_build_config}" ]]; then
-        return 0
+    if [[ "${load_build_config}" == "true" ]]; then
+        return 1
     fi
-    return 1
+    return 0
 }
 
 # Loads the build configuration file if it exists.
 function loadBuildConfig() {
-    if [[ -f "${BUILD_CONFIG:=$DEFAULT_BUILD_CONFIG}" ]]; then
-        source $BUILD_CONFIG
+    if [[ -f "${BUILD_CONFIG:-$DEFAULT_BUILD_CONFIG}" ]]; then
+        source "${BUILD_CONFIG:-$DEFAULT_BUILD_CONFIG}"
         load_build_config="true"
+    else
+        load_build_config=""
+    fi
+    if [[ -n "${BUILD_CONFIG}" ]] && ! loadedBuildConfig; then
+        echo -e "${COLOR_LIGHT_RED}Failed to load build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
+        return 1
     fi
 }
 
@@ -1280,6 +1286,9 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+if loadedBuildConfig; then
+    echo -e "${COLOR_LIGHT_GREEN}Loaded build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
+fi
 fixArgs
 initTargets
 autoBuild "${PLATFORMS}"
