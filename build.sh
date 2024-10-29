@@ -1117,9 +1117,10 @@ function buildTargetWithMicro() {
 #   Comma-separated list of expanded targets.
 function expandTargets() {
     local targets="$1"
+    IFS=, read -r -a targets <<< "${targets}"
     local expanded_targets=""
-    for target in ${targets//,/ }; do
-        if [[ "${target}" == "all" ]]; then
+    for target in "${targets[@]}"; do
+        if [[ "${target}" == "all" ]] || [[ "${target}" == '*' ]]; then
             echo "${ALLOWED_PLATFORMS}"
             return 0
         elif [[ "${target}" == *\** ]]; then
