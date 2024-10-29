@@ -100,7 +100,7 @@ runs:
       shell: bash
       run: |
         targets=${{ inputs.show-all-targets != 'true' && inputs.show-all-targets || '' }}
-        targets_output=$(BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" --show-all-targets${targets:+"=${targets}"})
+        targets_output=$(BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" --show-all-targets${targets:+"='${targets}'"})
         declare -a arr=()
         OIFS="$IFS"
         IFS=$'\n,'

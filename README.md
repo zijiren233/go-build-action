@@ -16,6 +16,7 @@ jobs:
         uses: zijiren233/go-build-action@v1
         with:
           targets: linux/amd64,windows/amd64
+          # targets: linux/*
           enable-micro: true
 ```
 
@@ -34,6 +35,7 @@ jobs:
         uses: zijiren233/go-build-action@v1
         with:
           show-all-targets: true
+          # show-all-targets: *
           # show-all-targets: linux/*,windows/*
 
   build-targets:
