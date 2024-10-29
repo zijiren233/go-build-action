@@ -160,6 +160,11 @@ function addBuildArgs() {
 
 # Fixes and validates command-line arguments and sets default values.
 function fixArgs() {
+    echo -e "${COLOR_LIGHT_BLUE}Working directory: ${COLOR_LIGHT_GREEN}$(pwd)${COLOR_RESET}"
+    if loadedBuildConfig; then
+        echo -e "${COLOR_LIGHT_GREEN}Loaded build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
+    fi
+
     setDefault "SOURCE_DIR" "${DEFAULT_SOURCE_DIR}"
     source_dir="$(cd "${SOURCE_DIR}" && pwd)"
     setDefault "BIN_NAME" "$(basename "${SOURCE_DIR}")"
@@ -1286,10 +1291,6 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-echo -e "${COLOR_LIGHT_GREEN}Working directory: $(pwd)${COLOR_RESET}"
-if loadedBuildConfig; then
-    echo -e "${COLOR_LIGHT_GREEN}Loaded build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
-fi
 fixArgs
 initTargets
 autoBuild "${PLATFORMS}"
