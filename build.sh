@@ -37,7 +37,7 @@ readonly DEFAULT_GO_CLEAN_CACHE="false"
 readonly GOHOSTOS="$(go env GOHOSTOS)"
 readonly GOHOSTARCH="$(go env GOHOSTARCH)"
 readonly GOHOSTPLATFORM="${GOHOSTOS}/${GOHOSTARCH}"
-readonly GOVERSION="${$(go env GOVERSION)#go}" # e.g 1.23.1
+readonly GOVERSION="$(go env GOVERSION | sed 's/^go//')" # e.g 1.23.1
 
 # Prints help information about build configuration.
 function printBuildConfigHelp() {
