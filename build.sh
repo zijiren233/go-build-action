@@ -919,23 +919,23 @@ function compareVersions() {
 
 function versionGreaterThan() {
     if [[ $(compareVersions "${GOVERSION}" "$1") -eq 1 ]]; then
-        return 1
+        return 0
     fi
-    return 0
+    return 1
 }
 
 function versionLessThan() {
     if [[ $(compareVersions "${GOVERSION}" "$1") -eq 2 ]]; then
-        return 1
+        return 0
     fi
-    return 0
+    return 1
 }
 
 function versionEqual() {
     if [[ $(compareVersions "${GOVERSION}" "$1") -eq 0 ]]; then
-        return 1
+        return 0
     fi
-    return 0
+    return 1
 }
 
 # Builds a target for a specific target and micro architecture variant.
