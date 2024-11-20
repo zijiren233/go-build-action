@@ -37,9 +37,7 @@ readonly DEFAULT_GO_CLEAN_CACHE="false"
 readonly GOHOSTOS="$(go env GOHOSTOS)"
 readonly GOHOSTARCH="$(go env GOHOSTARCH)"
 readonly GOHOSTPLATFORM="${GOHOSTOS}/${GOHOSTARCH}"
-readonly GOVERSION="$(go env GOVERSION)" # e.g go1.23.1
-
-# --- Function Declarations ---
+readonly GOVERSION="${$(go env GOVERSION)#go}" # e.g 1.23.1
 
 # Prints help information about build configuration.
 function printBuildConfigHelp() {
@@ -259,8 +257,6 @@ function downloadAndUnzip() {
     echo -e "${COLOR_LIGHT_GREEN}Download and extraction successful (took $((end_time - start_time))s)${COLOR_RESET}"
 }
 
-# --- Target Management ---
-
 # Removes duplicate targets from a comma-separated list.
 # Arguments:
 #   $1: Comma-separated list of targets.
@@ -357,8 +353,6 @@ function checkTargets() {
     done
     return 0
 }
-
-# --- CGO Dependencies ---
 
 function resetCGO() {
     CC=""
@@ -885,8 +879,6 @@ function getAndroidClang() {
     esac
 }
 
-# --- Utility Functions ---
-
 # Gets a separator line based on the terminal width.
 # Returns:
 #   A string of "-" characters with the length of the terminal width.
@@ -895,7 +887,56 @@ function printSeparator() {
     printf '%*s\n' "$width" '' | tr ' ' -
 }
 
-# --- Build Functions ---
+function compareVersions() {
+    if [[ $1 == $2 ]]; then
+        return 0
+    fi
+
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+
+    # Fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++)); do
+        ver1[i]=0
+    done
+
+    # Fill empty fields in ver2 with zeros
+    for ((i=${#ver2[@]}; i<${#ver1[@]}; i++)); do
+        ver2[i]=0
+    done
+
+    for ((i=0; i<${#ver1[@]}; i++)); do
+        if ((10#${ver1[i]} > 10#${ver2[i]})); then
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]})); then
+            return 2
+        fi
+    done
+
+    return 0
+}
+
+function versionGreaterThan() {
+    if [[ $(compareVersions "${GOVERSION}" "$1") -eq 1 ]]; then
+        return 1
+    fi
+    return 0
+}
+
+function versionLessThan() {
+    if [[ $(compareVersions "${GOVERSION}" "$1") -eq 2 ]]; then
+        return 1
+    fi
+    return 0
+}
+
+function versionEqual() {
+    if [[ $(compareVersions "${GOVERSION}" "$1") -eq 0 ]]; then
+        return 1
+    fi
+    return 0
+}
 
 # Builds a target for a specific target and micro architecture variant.
 # Arguments:
@@ -932,7 +973,7 @@ function buildTarget() {
         done
         ;;
     "arm64")
-        if [[ ! "${GOVERSION#go}" > "1.23" ]]; then
+        if versionLessThan "${GOVERSION}" "1.23"; then
             return 0
         fi
         for major in 8 9; do
@@ -947,7 +988,7 @@ function buildTarget() {
         done
         ;;
     "amd64")
-        if [[ ! "${GOVERSION#go}" > "1.18" ]]; then
+        if versionLessThan "${GOVERSION}" "1.18"; then
             return 0
         fi
         for v in {1..4}; do
@@ -972,6 +1013,15 @@ function buildTarget() {
         buildTargetWithMicro "${goos}" "${goarch}" "satconv"
         echo
         buildTargetWithMicro "${goos}" "${goarch}" "signext"
+        ;;
+    "riscv64")
+        if versionLessThan "${GOVERSION}" "1.23"; then
+            return 0
+        fi
+        echo
+        buildTargetWithMicro "${goos}" "${goarch}" "rva20u64"
+        echo
+        buildTargetWithMicro "${goos}" "${goarch}" "rva22u64"
         ;;
     esac
 }
@@ -1056,6 +1106,10 @@ function buildTargetWithMicro() {
         ;;
     "wasm")
         build_env+=("GOWASM=${micro}")
+        ;;
+    "riscv64")
+        build_env+=("GORISCV64=${micro}")
+        [ -z "$micro" ] && micro="rva20u64"
         ;;
     esac
 
@@ -1190,8 +1244,6 @@ function loadBuildConfig() {
         return 1
     fi
 }
-
-# --- Main Script ---
 
 loadBuildConfig
 
