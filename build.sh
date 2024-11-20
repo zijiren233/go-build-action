@@ -944,6 +944,24 @@ function versionEqual() {
     return 1
 }
 
+function microDisabled() {
+    local micro="$(echo "$1" | tr '[:lower:]' '[:upper:]')"
+    local var="${micro}_DISABLED"
+    if [[ -n "${micro}" ]] && [[ -n "${!var}" ]]; then
+        return 0
+    fi
+    return 1
+}
+
+function submicroDisabled() {
+    local micro="$(echo "$1" | tr '[:lower:]' '[:upper:]')"
+    local var="${micro}_SUBMICRO_DISABLED"
+    if [[ -n "${micro}" ]] && [[ -n "${!var}" ]]; then
+        return 0
+    fi
+    return 1
+}
+
 # Builds a target for a specific target and micro architecture variant.
 # Arguments:
 #   $1: Target target (e.g., "linux/amd64").
@@ -963,6 +981,9 @@ function buildTarget() {
     if [ -z "${ENABLE_MICRO}" ]; then
         return 0
     fi
+    if microDisabled "${goarch}"; then
+        return 0
+    fi
 
     # Build micro architecture variants based on the target architecture.
     case "${goarch%%-*}" in
@@ -976,6 +997,9 @@ function buildTarget() {
         for v in {5..7}; do
             echo
             buildTargetWithMicro "${goos}" "${goarch}" "$v"
+            if submicroDisabled "arm"; then
+                continue
+            fi
             if versionLessThan "${GOVERSION}" "1.22"; then
                 continue
             fi
@@ -993,6 +1017,9 @@ function buildTarget() {
             for minor in $(seq 0 $((major == 8 ? 9 : 5))); do
                 echo
                 buildTargetWithMicro "${goos}" "${goarch}" "v${major}.${minor}"
+                if submicroDisabled "arm64"; then
+                    continue
+                fi
                 echo
                 buildTargetWithMicro "${goos}" "${goarch}" "v${major}.${minor},lse"
                 echo
