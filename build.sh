@@ -471,10 +471,16 @@ function initDefaultCGODeps() {
             initLinuxCGO "x86_64" "" || return $?
             ;;
         "arm")
-            if [[ "${micro}" == "5" ]]; then
-                initLinuxCGO "armv5" "eabi" || return $?
+            if [[ -z "${micro}" ]]; then
+                initLinuxCGO "armv6" "eabihf" || return $?
+            elif [[ "${micro}" =~ ^5 ]]; then
+                initLinuxCGO "armv${micro%,*}" "eabi" || return $?
             else
-                initLinuxCGO "armv${micro}" "eabihf" || return $?
+                if [[ "${micro}" =~ ,softfloat$ ]]; then
+                    initLinuxCGO "armv${micro%,*}" "eabi" || return $?
+                else
+                    initLinuxCGO "armv${micro%,*}" "eabihf" || return $?
+                fi
             fi
             ;;
         "arm64")
@@ -896,16 +902,16 @@ function compareVersions() {
     local i ver1=($1) ver2=($2)
 
     # Fill empty fields in ver1 with zeros
-    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++)); do
+    for ((i = ${#ver1[@]}; i < ${#ver2[@]}; i++)); do
         ver1[i]=0
     done
 
     # Fill empty fields in ver2 with zeros
-    for ((i=${#ver2[@]}; i<${#ver1[@]}; i++)); do
+    for ((i = ${#ver2[@]}; i < ${#ver1[@]}; i++)); do
         ver2[i]=0
     done
 
-    for ((i=0; i<${#ver1[@]}; i++)); do
+    for ((i = 0; i < ${#ver1[@]}; i++)); do
         if ((10#${ver1[i]} > 10#${ver2[i]})); then
             return 1
         fi
@@ -970,6 +976,13 @@ function buildTarget() {
         for v in {5..7}; do
             echo
             buildTargetWithMicro "${goos}" "${goarch}" "$v"
+            if versionLessThan "${GOVERSION}" "1.22"; then
+                continue
+            fi
+            echo
+            buildTargetWithMicro "${goos}" "${goarch}" "$v,softfloat"
+            echo
+            buildTargetWithMicro "${goos}" "${goarch}" "$v,hardfloat"
         done
         ;;
     "arm64")
@@ -996,7 +1009,19 @@ function buildTarget() {
             buildTargetWithMicro "${goos}" "${goarch}" "v$v"
         done
         ;;
-    "mips" | "mipsle" | "mips64" | "mips64le")
+    "mips" | "mipsle")
+        if versionLessThan "${GOVERSION}" "1.10"; then
+            return 0
+        fi
+        echo
+        buildTargetWithMicro "${goos}" "${goarch}" "hardfloat"
+        echo
+        buildTargetWithMicro "${goos}" "${goarch}" "softfloat"
+        ;;
+    "mips64" | "mips64le")
+        if versionLessThan "${GOVERSION}" "1.11"; then
+            return 0
+        fi
         echo
         buildTargetWithMicro "${goos}" "${goarch}" "hardfloat"
         echo
