@@ -946,7 +946,7 @@ function versionEqual() {
 
 function microDisabled() {
     local micro="$(echo "$1" | tr '[:lower:]' '[:upper:]')"
-    local var="${micro}_MICRO_DISABLED"
+    local var="MICRO_${micro}_DISABLED"
     if [[ -n "${micro}" ]] && [[ -n "${!var}" ]]; then
         return 0
     fi
@@ -955,7 +955,7 @@ function microDisabled() {
 
 function submicroDisabled() {
     local micro="$(echo "$1" | tr '[:lower:]' '[:upper:]')"
-    local var="${micro}_SUBMICRO_DISABLED"
+    local var="SUBMICRO_${micro}_DISABLED"
     if [[ -n "${micro}" ]] && [[ -n "${!var}" ]]; then
         return 0
     fi
