@@ -160,8 +160,10 @@ function addBuildArgs() {
 function fixArgs() {
     echo -e "${COLOR_LIGHT_BLUE}Working directory: ${COLOR_LIGHT_GREEN}$(pwd)${COLOR_RESET}"
     echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}"
-    if loadedBuildConfig; then
-        echo -e "${COLOR_LIGHT_GREEN}Loaded build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
+    if [[ -f "${BUILD_CONFIG}" ]]; then
+        echo -e "${COLOR_LIGHT_GREEN}Loaded build config success from ${BUILD_CONFIG}${COLOR_RESET}"
+    else
+        echo -e "${COLOR_LIGHT_YELLOW}Skipping build config ${BUILD_CONFIG}, file not found${COLOR_RESET}"
     fi
 
     setDefault "RESULT_DIR" "${SOURCE_DIR}/build"
@@ -1273,28 +1275,13 @@ function autoBuild() {
     fi
 }
 
-# Checks if the build configuration file has been loaded.
-# Returns:
-#   0: Build configuration file has not been loaded.
-#   1: Build configuration file has been loaded.
-function loadedBuildConfig() {
-    if [[ "${load_build_config}" == "true" ]]; then
-        return 1
-    fi
-    return 0
-}
-
 # Loads the build configuration file if it exists.
 function loadBuildConfig() {
-    if [[ -f "${BUILD_CONFIG:-$DEFAULT_BUILD_CONFIG}" ]]; then
-        source "${BUILD_CONFIG:-$DEFAULT_BUILD_CONFIG}"
-        load_build_config="true"
-    else
-        load_build_config=""
-    fi
-    if [[ -n "${BUILD_CONFIG}" ]] && ! loadedBuildConfig; then
+    load_build_config=""
+    if [[ -f "${BUILD_CONFIG}" ]]; then
+        source "${BUILD_CONFIG}" && return 0
         echo -e "${COLOR_LIGHT_RED}Failed to load build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
-        return 1
+        exit 1
     fi
 }
 
