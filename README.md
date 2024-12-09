@@ -15,7 +15,7 @@ jobs:
       - name: Go Build
         uses: zijiren233/go-build-action@v1
         with:
-          targets: linux/amd64,windows/amd64
+          targets: linux/amd64,linux/arm64:nocgo,windows/amd64:cgo
           # targets: linux/*
           enable-micro: true
 ```
