@@ -160,6 +160,7 @@ function addBuildArgs() {
 function fixArgs() {
     echo -e "${COLOR_LIGHT_BLUE}Working directory: ${COLOR_LIGHT_GREEN}$(pwd)${COLOR_RESET}"
     echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}"
+    echo -e "${COLOR_LIGHT_BLUE}Result directory: ${COLOR_LIGHT_GREEN}${RESULT_DIR}${COLOR_RESET}"
     if loadedBuildConfig; then
         echo -e "${COLOR_LIGHT_GREEN}Loaded build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
     fi
@@ -169,8 +170,6 @@ function fixArgs() {
     mkdir -p "${RESULT_DIR}"
     setDefault "BIN_NAME" "$(basename "${SOURCE_DIR}")"
     setDefault "BIN_NAME_NO_SUFFIX" ""
-    echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}"
-    echo -e "${COLOR_LIGHT_BLUE}Build result directory: ${COLOR_LIGHT_GREEN}${RESULT_DIR}${COLOR_RESET}"
 
     setDefault "CROSS_COMPILER_DIR" "$DEFAULT_CROSS_COMPILER_DIR"
     setDefault "PLATFORMS" "${GOHOSTPLATFORM}"
