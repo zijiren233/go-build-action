@@ -295,7 +295,7 @@ function initTargets() {
     setDefault "CGO_ENABLED" "${DEFAULT_CGO_ENABLED}"
 
     local distList="$(go tool dist list)"
-    addAllowedTargets "$(echo "$distList" | grep windows | grep -v arm)"
+    addAllowedTargets "$(echo "$distList" | grep windows)"
     addAllowedTargets "$(echo "$distList" | grep linux)"
     addAllowedTargets "$(echo "$distList" | grep android)"
     addAllowedTargets "$(echo "$distList" | grep darwin)"
