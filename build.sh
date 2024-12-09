@@ -161,9 +161,9 @@ function fixArgs() {
     echo -e "${COLOR_LIGHT_BLUE}Working directory: ${COLOR_LIGHT_GREEN}$(pwd)${COLOR_RESET}"
     echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}"
     if [[ -f "${BUILD_CONFIG}" ]]; then
-        echo -e "${COLOR_LIGHT_GREEN}Loaded build config success from ${BUILD_CONFIG}${COLOR_RESET}"
+        echo -e "${COLOR_LIGHT_BLUE}Config file: ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}"
     else
-        echo -e "${COLOR_LIGHT_YELLOW}Skipping build config ${BUILD_CONFIG}, file not found${COLOR_RESET}"
+        echo -e "${COLOR_LIGHT_YELLOW}Skipping config (file not found): ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}"
     fi
 
     setDefault "RESULT_DIR" "${SOURCE_DIR}/build"

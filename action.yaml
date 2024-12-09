@@ -101,8 +101,9 @@ runs:
       working-directory: ${{ github.workspace }}
       run: |
         export SOURCE_DIR="${{ inputs.source-dir }}"
+        export BUILD_CONFIG="${{ inputs.build-config }}"
         targets=${{ inputs.show-all-targets != 'true' && inputs.show-all-targets || '' }}
-        targets_output=$(BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" --show-all-targets${targets:+"='${targets}'"})
+        targets_output=$("${{ github.action_path }}/build.sh" --show-all-targets${targets:+"='${targets}'"})
         declare -a arr=()
         OIFS="$IFS"
         IFS=$'\n,'
@@ -121,7 +122,8 @@ runs:
       working-directory: ${{ github.workspace }}
       run: |
         export SOURCE_DIR="${{ inputs.source-dir }}"
-        BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" \
+        export BUILD_CONFIG="${{ inputs.build-config }}"
+        "${{ github.action_path }}/build.sh" \
           ${{ inputs.result-dir != '' && format('--result-dir=''{0}''', inputs.result-dir) || '' }} \
           ${{ inputs.buildmode != '' && format('--buildmode=''{0}''', inputs.buildmode) || '' }} \
           ${{ inputs.bin-name != '' && format('--bin-name=''{0}''', inputs.bin-name) || '' }} \
