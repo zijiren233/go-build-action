@@ -97,9 +97,9 @@ runs:
   steps:
     - id: get_targets
       if: ${{ inputs.show-all-targets != 'false' }}
-      working-directory: ${{ inputs.source-dir }}
       shell: bash
       run: |
+        export SOURCE_DIR="${{ inputs.source-dir }}"
         targets=${{ inputs.show-all-targets != 'true' && inputs.show-all-targets || '' }}
         targets_output=$(BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" --show-all-targets${targets:+"='${targets}'"})
         declare -a arr=()
@@ -116,9 +116,9 @@ runs:
 
     - id: build
       if: ${{ inputs.show-all-targets == 'false' }}
-      working-directory: ${{ inputs.source-dir }}
       shell: bash
       run: |
+        export SOURCE_DIR="${{ inputs.source-dir }}"
         BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" \
           ${{ inputs.result-dir != '' && format('--result-dir=''{0}''', inputs.result-dir) || '' }} \
           ${{ inputs.buildmode != '' && format('--buildmode=''{0}''', inputs.buildmode) || '' }} \

@@ -18,6 +18,7 @@ readonly COLOR_RESET='\033[0m'
 readonly DEFAULT_SOURCE_DIR="$(pwd)"
 readonly DEFAULT_RESULT_DIR="${DEFAULT_SOURCE_DIR}/build"
 readonly DEFAULT_BUILD_CONFIG="${DEFAULT_SOURCE_DIR}/build.config.sh"
+
 readonly DEFAULT_BUILDMODE="default"
 readonly DEFAULT_CGO_ENABLED="1"
 readonly DEFAULT_FORCE_CGO="0"
@@ -108,7 +109,6 @@ function printHelp() {
     echo -e "  ${COLOR_LIGHT_BLUE}-t=<targets>, --targets=<targets>${COLOR_RESET} - Specify target target(s) (default: host target, supports: all, linux, linux/arm*, ...)"
     echo -e "  ${COLOR_LIGHT_BLUE}--result-dir=<dir>${COLOR_RESET}             - Specify the build result directory (default: ${DEFAULT_RESULT_DIR})"
     echo -e "  ${COLOR_LIGHT_BLUE}--show-all-targets${COLOR_RESET}           - Display all supported target targets"
-    echo -e "  ${COLOR_LIGHT_BLUE}--source-dir=<dir>${COLOR_RESET}             - Specify the source directory (default: ${DEFAULT_SOURCE_DIR})"
     echo -e "  ${COLOR_LIGHT_BLUE}--tags='<tags>'${COLOR_RESET}                - Set build tags"
 
     if declare -f printDepHelp >/dev/null; then
@@ -163,14 +163,12 @@ function fixArgs() {
         echo -e "${COLOR_LIGHT_GREEN}Loaded build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
     fi
 
-    setDefault "SOURCE_DIR" "${DEFAULT_SOURCE_DIR}"
-    source_dir="$(cd "${SOURCE_DIR}" && pwd)"
+    setDefault "RESULT_DIR" "${SOURCE_DIR}/build"
+    RESULT_DIR="$(cd "${RESULT_DIR}" && pwd)"
+    mkdir -p "${RESULT_DIR}"
     setDefault "BIN_NAME" "$(basename "${SOURCE_DIR}")"
     setDefault "BIN_NAME_NO_SUFFIX" ""
-    setDefault "RESULT_DIR" "${DEFAULT_RESULT_DIR}"
-    mkdir -p "${RESULT_DIR}"
-    RESULT_DIR="$(cd "${RESULT_DIR}" && pwd)"
-    echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${source_dir}${COLOR_RESET}"
+    echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}"
     echo -e "${COLOR_LIGHT_BLUE}Build result directory: ${COLOR_LIGHT_GREEN}${RESULT_DIR}${COLOR_RESET}"
 
     setDefault "CROSS_COMPILER_DIR" "$DEFAULT_CROSS_COMPILER_DIR"
@@ -1214,9 +1212,9 @@ function buildTargetWithMicro() {
         key=$(echo "${var}" | cut -d= -f1)
         value=$(echo "${var}" | cut -d= -f2-)
         echo -e "${COLOR_LIGHT_GREEN}export${COLOR_RESET} ${COLOR_WHITE}${key}='${value}'${COLOR_RESET}"
-    done)\n${COLOR_LIGHT_CYAN}go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags \"${TAGS}\" -ldflags \"${LDFLAGS}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}\" -o \"${target_file}\" \"${source_dir}\"${COLOR_RESET}"
+    done)\n${COLOR_LIGHT_CYAN}go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags \"${TAGS}\" -ldflags \"${LDFLAGS}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}\" -o \"${target_file}\" \"${SOURCE_DIR}\"${COLOR_RESET}"
     local start_time=$(date +%s)
-    env "${build_env[@]}" go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags "${TAGS}" -ldflags "${LDFLAGS}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}" -o "${target_file}" "${source_dir}"
+    env "${build_env[@]}" go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags "${TAGS}" -ldflags "${LDFLAGS}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}" -o "${target_file}" "${SOURCE_DIR}"
     local end_time=$(date +%s)
     echo -e "${COLOR_LIGHT_GREEN}Build successful: ${goos}/${goarch}${micro:+ ${micro}}  (took $((end_time - start_time))s)${COLOR_RESET}"
 }
@@ -1297,6 +1295,10 @@ function loadBuildConfig() {
     fi
 }
 
+setDefault "SOURCE_DIR" "${DEFAULT_SOURCE_DIR}"
+SOURCE_DIR="$(cd "${SOURCE_DIR}" && pwd)"
+setDefault "BUILD_CONFIG" "${SOURCE_DIR}/build.conf.sh"
+
 loadBuildConfig
 
 # Parse command-line arguments.
@@ -1315,9 +1317,6 @@ while [[ $# -gt 0 ]]; do
         ;;
     --disable-cgo)
         disableCGO
-        ;;
-    --source-dir=*)
-        SOURCE_DIR="${1#*=}"
         ;;
     --bin-name=*)
         BIN_NAME="${1#*=}"
