@@ -20,8 +20,7 @@ readonly DEFAULT_RESULT_DIR="${DEFAULT_SOURCE_DIR}/build"
 readonly DEFAULT_BUILD_CONFIG="${DEFAULT_SOURCE_DIR}/build.config.sh"
 
 readonly DEFAULT_BUILDMODE="default"
-readonly DEFAULT_CGO_ENABLED="1"
-readonly DEFAULT_FORCE_CGO="0"
+readonly DEFAULT_CGO_ENABLED="0"
 readonly DEFAULT_CC="gcc"
 readonly DEFAULT_CXX="g++"
 readonly DEFAULT_CROSS_COMPILER_DIR="$(dirname $(mktemp -u))/cross"
@@ -63,7 +62,6 @@ function printEnvHelp() {
     echo -e "  ${COLOR_LIGHT_CYAN}CROSS_COMPILER_DIR${COLOR_RESET} - Set the cross compiler directory (default: ${DEFAULT_CROSS_COMPILER_DIR})"
     echo -e "  ${COLOR_LIGHT_CYAN}ENABLE_MICRO${COLOR_RESET}       - Enable building micro variants"
     echo -e "  ${COLOR_LIGHT_CYAN}FORCE_CC${COLOR_RESET}           - Force the use of a specific C compiler"
-    echo -e "  ${COLOR_LIGHT_CYAN}FORCE_CGO${COLOR_RESET}          - Force the use of CGO (default: ${DEFAULT_FORCE_CGO})"
     echo -e "  ${COLOR_LIGHT_CYAN}FORCE_CXX${COLOR_RESET}          - Force the use of a specific C++ compiler"
     echo -e "  ${COLOR_LIGHT_CYAN}GH_PROXY${COLOR_RESET}           - Set the GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
     echo -e "  ${COLOR_LIGHT_CYAN}GO_CLEAN_CACHE${COLOR_RESET}      - Clean Go build cache before building (default: ${DEFAULT_GO_CLEAN_CACHE})"
@@ -91,7 +89,6 @@ function printHelp() {
     echo -e "  ${COLOR_LIGHT_BLUE}--bin-name-no-suffix${COLOR_RESET}           - Do not append the architecture suffix to the binary name"
     echo -e "  ${COLOR_LIGHT_BLUE}--buildmode=<mode>${COLOR_RESET}            - Set the build mode (default: ${DEFAULT_BUILDMODE})"
     echo -e "  ${COLOR_LIGHT_BLUE}--cross-compiler-dir=<dir>${COLOR_RESET}     - Specify the cross compiler directory (default: ${DEFAULT_CROSS_COMPILER_DIR})"
-    echo -e "  ${COLOR_LIGHT_BLUE}--disable-cgo${COLOR_RESET}                  - Disable CGO support"
     echo -e "  ${COLOR_LIGHT_BLUE}-eh, --env-help${COLOR_RESET}                - Display help information about environment variables"
     echo -e "  ${COLOR_LIGHT_BLUE}--enable-micro${COLOR_RESET}                 - Enable building micro architecture variants"
     echo -e "  ${COLOR_LIGHT_BLUE}--ext-ldflags='<flags>'${COLOR_RESET}        - Set external linker flags (default: \"${DEFAULT_EXT_LDFLAGS}\")"
@@ -170,7 +167,6 @@ function fixArgs() {
     setDefault "PLATFORMS" "${GOHOSTPLATFORM}"
     setDefault "BUILDMODE" "${DEFAULT_BUILDMODE}"
     setDefault "ENABLE_MICRO" ""
-    setDefault "FORCE_CGO" "${DEFAULT_FORCE_CGO}"
     setDefault "HOST_CC" "${DEFAULT_CC}"
     setDefault "HOST_CXX" "${DEFAULT_CXX}"
     setDefault "FORCE_CC" ""
@@ -193,14 +189,6 @@ function fixArgs() {
 #   1: CGO is disabled.
 function isCGOEnabled() {
     [[ "${CGO_ENABLED}" == "1" ]]
-}
-
-function enableCGO() {
-    CGO_ENABLED="1"
-}
-
-function disableCGO() {
-    CGO_ENABLED="0"
 }
 
 # Downloads a file from a URL and extracts it.
@@ -288,11 +276,20 @@ function initTargets() {
     setDefault "CGO_ENABLED" "${DEFAULT_CGO_ENABLED}"
 
     local distList="$(go tool dist list)"
-    addAllowedTargets "$(echo "$distList" | grep windows)"
+
     addAllowedTargets "$(echo "$distList" | grep linux)"
     addAllowedTargets "$(echo "$distList" | grep android)"
     addAllowedTargets "$(echo "$distList" | grep darwin)"
-    addAllowedTargets "$(echo "$distList" | grep ios) $(echo "$distList" | grep ios | sed 's/$/-sim/')"
+    addAllowedTargets "$(echo "$distList" | grep ios)"
+
+    if !isCGOEnabled; then
+        addAllowedTargets "$(echo "$distList" | grep windows)"
+        addAllowedTargets "$(echo "$distList" | grep netbsd)"
+        addAllowedTargets "$(echo "$distList" | grep openbsd)"
+    else
+        addAllowedTargets "$(echo "$distList" | grep windows | grep -v arm)"
+        # addAllowedTargets "$(echo "$distList" | grep ios | sed 's/$/-sim/')"
+    fi
 
     addAllowedTargets "${GOHOSTOS}/${GOHOSTARCH}"
 
@@ -1183,23 +1180,12 @@ function buildTargetWithMicro() {
             build_env+=("CGO_CXXFLAGS=${CGO_FLAGS}${MORE_CGO_CXXFLAGS:+ ${MORE_CGO_CXXFLAGS}}")
             build_env+=("CGO_LDFLAGS=${CGO_LDFLAGS}${MORE_CGO_LDFLAGS:+ ${MORE_CGO_LDFLAGS}}")
             ;;
-        1)
-            if [[ "${FORCE_CGO}" == "1" ]]; then
-                echo -e "${COLOR_LIGHT_RED}Error initializing CGO dependencies.${COLOR_RESET}"
-                return 1
-            fi
-            build_env+=("CGO_ENABLED=0")
-            ;;
         *)
             echo -e "${COLOR_LIGHT_RED}Error initializing CGO dependencies.${COLOR_RESET}"
             return 1
             ;;
         esac
     else
-        if [[ "${FORCE_CGO}" == "1" ]]; then
-            echo -e "${COLOR_LIGHT_RED}Error initializing CGO dependencies.${COLOR_RESET}"
-            return 1
-        fi
         build_env+=("CGO_ENABLED=0")
     fi
 
@@ -1303,9 +1289,6 @@ while [[ $# -gt 0 ]]; do
     --buildmode=*)
         BUILDMODE="${1#*=}"
         ;;
-    --disable-cgo)
-        disableCGO
-        ;;
     --bin-name=*)
         BIN_NAME="${1#*=}"
         ;;
@@ -1348,9 +1331,6 @@ while [[ $# -gt 0 ]]; do
         ;;
     --cross-compiler-dir=*)
         CROSS_COMPILER_DIR="${1#*=}"
-        ;;
-    --force-cgo)
-        FORCE_CGO="1"
         ;;
     --force-gcc=*)
         FORCE_CC="${1#*=}"

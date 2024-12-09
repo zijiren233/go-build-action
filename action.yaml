@@ -31,8 +31,8 @@ inputs:
   targets:
     description: "Target targets to build for (e.g. linux/amd64,windows/386)"
     required: false
-  disable-cgo:
-    description: "Disable CGO"
+  cgo-enabled:
+    description: "Enable CGO"
     required: false
   force-cgo:
     description: "Force use of CGO"
@@ -102,6 +102,7 @@ runs:
       run: |
         export SOURCE_DIR="${{ inputs.source-dir }}"
         export BUILD_CONFIG="${{ inputs.build-config }}"
+        export CGO_ENABLED="${{ inputs.cgo-enabled == 'true' && '1' || '0' }}"
         targets=${{ inputs.show-all-targets != 'true' && inputs.show-all-targets || '' }}
         targets_output=$("${{ github.action_path }}/build.sh" --show-all-targets${targets:+"='${targets}'"})
         declare -a arr=()
@@ -123,6 +124,7 @@ runs:
       run: |
         export SOURCE_DIR="${{ inputs.source-dir }}"
         export BUILD_CONFIG="${{ inputs.build-config }}"
+        export CGO_ENABLED="${{ inputs.cgo-enabled == 'true' && '1' || '0' }}"
         "${{ github.action_path }}/build.sh" \
           ${{ inputs.result-dir != '' && format('--result-dir=''{0}''', inputs.result-dir) || '' }} \
           ${{ inputs.buildmode != '' && format('--buildmode=''{0}''', inputs.buildmode) || '' }} \
@@ -130,7 +132,6 @@ runs:
           ${{ inputs.bin-name-no-suffix == 'true' && '--bin-name-no-suffix' || '' }} \
           ${{ inputs.more-go-cmd-args != '' && format('--more-go-cmd-args=''{0}''', inputs.more-go-cmd-args) || '' }} \
           ${{ inputs.targets != '' && format('--targets=''{0}''', inputs.targets) || '' }} \
-          ${{ inputs.disable-cgo == 'true' && '--disable-cgo' || '' }} \
           ${{ inputs.force-cgo == 'true' && '--force-cgo' || '' }} \
           ${{ inputs.force-gcc != '' && format('--force-gcc=''{0}''', inputs.force-gcc) || '' }} \
           ${{ inputs.force-gxx != '' && format('--force-gxx=''{0}''', inputs.force-gxx) || '' }} \
