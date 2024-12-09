@@ -38,6 +38,7 @@ readonly GOHOSTOS="$(go env GOHOSTOS)"
 readonly GOHOSTARCH="$(go env GOHOSTARCH)"
 readonly GOHOSTPLATFORM="${GOHOSTOS}/${GOHOSTARCH}"
 readonly GOVERSION="$(go env GOVERSION | sed 's/^go//')" # e.g 1.23.1
+readonly GODISTLIST="$(go tool dist list)"
 
 # Prints help information about build configuration.
 function printBuildConfigHelp() {
@@ -161,6 +162,8 @@ function fixArgs() {
     setDefault "BIN_NAME" "$(basename "${SOURCE_DIR}")"
     echo -e "${COLOR_LIGHT_BLUE}Binary name: ${COLOR_LIGHT_GREEN}${BIN_NAME}${COLOR_RESET}"
 
+    setDefault "CGO_ENABLED" "${DEFAULT_CGO_ENABLED}"
+
     setDefault "BIN_NAME_NO_SUFFIX" ""
 
     setDefault "CROSS_COMPILER_DIR" "$DEFAULT_CROSS_COMPILER_DIR"
@@ -273,29 +276,9 @@ function clearAllowedTargets() {
 # Initializes the targets based on environment variables and allowed targets.
 # go tool dist list
 function initTargets() {
-    setDefault "CGO_ENABLED" "${DEFAULT_CGO_ENABLED}"
+    addAllowedTargets "$GODISTLIST"
 
-    local distList="$(go tool dist list)"
-
-    addAllowedTargets "$(echo "$distList" | grep linux)"
-    addAllowedTargets "$(echo "$distList" | grep android)"
-    addAllowedTargets "$(echo "$distList" | grep darwin)"
-    addAllowedTargets "$(echo "$distList" | grep ios)"
-
-    if !isCGOEnabled; then
-        addAllowedTargets "$(echo "$distList" | grep windows)"
-        addAllowedTargets "$(echo "$distList" | grep netbsd)"
-        addAllowedTargets "$(echo "$distList" | grep openbsd)"
-    else
-        addAllowedTargets "$(echo "$distList" | grep windows | grep -v arm)"
-        # addAllowedTargets "$(echo "$distList" | grep ios | sed 's/$/-sim/')"
-    fi
-
-    addAllowedTargets "${GOHOSTOS}/${GOHOSTARCH}"
-
-    if declare -f initDepTargets >/dev/null; then
-        initDepTargets
-    fi
+    # addAllowedTargets "$(echo "$GODISTLIST" | grep ios | sed 's/$/-sim/')"
 }
 
 # Checks if a target is allowed.
@@ -1274,6 +1257,7 @@ setDefault "BUILD_CONFIG" "${SOURCE_DIR}/build.config.sh"
 
 printVar
 loadBuildConfig
+initTargets
 
 # Parse command-line arguments.
 while [[ $# -gt 0 ]]; do
@@ -1317,12 +1301,10 @@ while [[ $# -gt 0 ]]; do
         addTags "${1#*=}"
         ;;
     --show-all-targets)
-        initTargets
         echo "${ALLOWED_PLATFORMS}"
         exit 0
         ;;
     --show-all-targets=*)
-        initTargets
         echo "$(expandTargets "${1#*=}")"
         exit 0
         ;;
@@ -1363,5 +1345,4 @@ while [[ $# -gt 0 ]]; do
 done
 
 fixArgs
-initTargets
 autoBuild "${PLATFORMS}"
