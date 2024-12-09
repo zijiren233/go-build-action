@@ -1300,7 +1300,7 @@ function loadBuildConfig() {
 
 setDefault "SOURCE_DIR" "${DEFAULT_SOURCE_DIR}"
 SOURCE_DIR="$(cd "${SOURCE_DIR}" && pwd)"
-setDefault "BUILD_CONFIG" "${SOURCE_DIR}/build.conf.sh"
+setDefault "BUILD_CONFIG" "${SOURCE_DIR}/build.config.sh"
 
 loadBuildConfig
 
