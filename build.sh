@@ -1249,15 +1249,16 @@ function printVar() {
     echo -e "${COLOR_LIGHT_BLUE}Working directory: ${COLOR_LIGHT_GREEN}$(pwd)${COLOR_RESET}" 1>&2
     echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}" 1>&2
     echo -e "${COLOR_LIGHT_BLUE}Config file: ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}" 1>&2
+    echo -e "${COLOR_LIGHT_BLUE}Allowed targets: ${COLOR_LIGHT_GREEN}${ALLOWED_PLATFORMS}${COLOR_RESET}" 1>&2
 }
 
 setDefault "SOURCE_DIR" "${DEFAULT_SOURCE_DIR}"
 SOURCE_DIR="$(cd "${SOURCE_DIR}" && pwd)"
 setDefault "BUILD_CONFIG" "${SOURCE_DIR}/build.config.sh"
 
+initTargets
 printVar
 loadBuildConfig
-initTargets
 
 # Parse command-line arguments.
 while [[ $# -gt 0 ]]; do
