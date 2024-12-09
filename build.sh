@@ -289,7 +289,7 @@ function initTargets() {
 #   0: Target is allowed.
 #   1: Target is not allowed.
 function checkTarget() {
-    local target_target="$1"
+    local target_target="${1%:*}"
 
     if [[ "${ALLOWED_PLATFORMS}" =~ (^|,)${target_target}($|,) ]]; then
         return 0
@@ -307,19 +307,20 @@ function checkTarget() {
 #   3: Error checking targets.
 function checkTargets() {
     for target in ${1//,/ }; do
+        local base_target="${target%:*}"
         case $(
-            checkTarget "${target}"
+            checkTarget "${base_target}"
             echo $?
         ) in
         0)
             continue
             ;;
         1)
-            echo -e "${COLOR_LIGHT_RED}Target not supported: ${target}${COLOR_RESET}"
+            echo -e "${COLOR_LIGHT_RED}Target not supported: ${base_target}${COLOR_RESET}"
             return 1
             ;;
         *)
-            echo -e "${COLOR_LIGHT_RED}Error checking target: ${target}${COLOR_RESET}"
+            echo -e "${COLOR_LIGHT_RED}Error checking target: ${base_target}${COLOR_RESET}"
             return 3
             ;;
         esac
@@ -944,12 +945,21 @@ function submicroDisabled() {
 # https://go.dev/doc/install/source#environment
 function buildTarget() {
     local target="$1"
+    local cgo_setting="${target##*:}"
+    target="${target%:*}"
     local goos="${target%/*}"
     local goarch="${target#*/}"
 
     echo -e "${COLOR_LIGHT_GRAY}$(printSeparator)${COLOR_RESET}"
 
-    buildTargetWithMicro "${goos}" "${goarch}" ""
+    local cgo_enabled="${CGO_ENABLED}"
+    if [[ "${cgo_setting}" == "cgo" ]]; then
+        cgo_enabled="1"
+    elif [[ "${cgo_setting}" == "nocgo" ]]; then
+        cgo_enabled="0"
+    fi
+
+    buildTargetWithMicro "${goos}" "${goarch}" "" "${cgo_enabled}"
 
     if [ -z "${ENABLE_MICRO}" ]; then
         return 0
@@ -962,14 +972,14 @@ function buildTarget() {
     case "${goarch%%-*}" in
     "386")
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "sse2"
+        buildTargetWithMicro "${goos}" "${goarch}" "sse2" "${cgo_enabled}"
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "softfloat"
+        buildTargetWithMicro "${goos}" "${goarch}" "softfloat" "${cgo_enabled}"
         ;;
     "arm")
         for v in {5..7}; do
             echo
-            buildTargetWithMicro "${goos}" "${goarch}" "$v"
+            buildTargetWithMicro "${goos}" "${goarch}" "$v" "${cgo_enabled}"
             if submicroDisabled "arm"; then
                 continue
             fi
@@ -977,9 +987,9 @@ function buildTarget() {
                 continue
             fi
             echo
-            buildTargetWithMicro "${goos}" "${goarch}" "$v,softfloat"
+            buildTargetWithMicro "${goos}" "${goarch}" "$v,softfloat" "${cgo_enabled}"
             echo
-            buildTargetWithMicro "${goos}" "${goarch}" "$v,hardfloat"
+            buildTargetWithMicro "${goos}" "${goarch}" "$v,hardfloat" "${cgo_enabled}"
         done
         ;;
     "arm64")
@@ -989,14 +999,14 @@ function buildTarget() {
         for major in 8 9; do
             for minor in $(seq 0 $((major == 8 ? 9 : 5))); do
                 echo
-                buildTargetWithMicro "${goos}" "${goarch}" "v${major}.${minor}"
+                buildTargetWithMicro "${goos}" "${goarch}" "v${major}.${minor}" "${cgo_enabled}"
                 if submicroDisabled "arm64"; then
                     continue
                 fi
                 echo
-                buildTargetWithMicro "${goos}" "${goarch}" "v${major}.${minor},lse"
+                buildTargetWithMicro "${goos}" "${goarch}" "v${major}.${minor},lse" "${cgo_enabled}"
                 echo
-                buildTargetWithMicro "${goos}" "${goarch}" "v${major}.${minor},crypto"
+                buildTargetWithMicro "${goos}" "${goarch}" "v${major}.${minor},crypto" "${cgo_enabled}"
             done
         done
         ;;
@@ -1006,7 +1016,7 @@ function buildTarget() {
         fi
         for v in {1..4}; do
             echo
-            buildTargetWithMicro "${goos}" "${goarch}" "v$v"
+            buildTargetWithMicro "${goos}" "${goarch}" "v$v" "${cgo_enabled}"
         done
         ;;
     "mips" | "mipsle")
@@ -1014,39 +1024,39 @@ function buildTarget() {
             return 0
         fi
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "hardfloat"
+        buildTargetWithMicro "${goos}" "${goarch}" "hardfloat" "${cgo_enabled}"
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "softfloat"
+        buildTargetWithMicro "${goos}" "${goarch}" "softfloat" "${cgo_enabled}"
         ;;
     "mips64" | "mips64le")
         if versionLessThan "${GOVERSION}" "1.11"; then
             return 0
         fi
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "hardfloat"
+        buildTargetWithMicro "${goos}" "${goarch}" "hardfloat" "${cgo_enabled}"
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "softfloat"
+        buildTargetWithMicro "${goos}" "${goarch}" "softfloat" "${cgo_enabled}"
         ;;
     "ppc64" | "ppc64le")
         for version in 8 9 10; do
             echo
-            buildTargetWithMicro "${goos}" "${goarch}" "power${version}"
+            buildTargetWithMicro "${goos}" "${goarch}" "power${version}" "${cgo_enabled}"
         done
         ;;
     "wasm")
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "satconv"
+        buildTargetWithMicro "${goos}" "${goarch}" "satconv" "${cgo_enabled}"
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "signext"
+        buildTargetWithMicro "${goos}" "${goarch}" "signext" "${cgo_enabled}"
         ;;
     "riscv64")
         if versionLessThan "${GOVERSION}" "1.23"; then
             return 0
         fi
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "rva20u64"
+        buildTargetWithMicro "${goos}" "${goarch}" "rva20u64" "${cgo_enabled}"
         echo
-        buildTargetWithMicro "${goos}" "${goarch}" "rva22u64"
+        buildTargetWithMicro "${goos}" "${goarch}" "rva22u64" "${cgo_enabled}"
         ;;
     esac
 }
@@ -1086,11 +1096,13 @@ function extension() {
 #   $1: GOOS
 #   $2: GOARCH
 #   $3: Micro architecture variant (e.g., "sse2", "softfloat"). Ref: https://go.dev/wiki/MinimumRequirements#microarchitecture-support
+#   $4: CGO enabled (0 or 1)
 function buildTargetWithMicro() {
     local goos="$1"
     local _goarch="$2"
     local goarch="${_goarch%%-*}"
     local micro="$3"
+    local cgo_enabled="$4"
     local build_env=(
         "GOOS=${goos}"
         "GOARCH=${goarch}"
@@ -1145,7 +1157,7 @@ function buildTargetWithMicro() {
         go clean -cache
     fi
 
-    if isCGOEnabled; then
+    if [[ "${cgo_enabled}" == "1" ]]; then
         if initCGODeps "${goos}" "${_goarch}" "${micro}"; then
             code=0
         else
@@ -1193,17 +1205,19 @@ function expandTargets() {
     IFS=, read -r -a targets <<<"${targets}"
     local expanded_targets=""
     for target in "${targets[@]}"; do
-        if [[ "${target}" == "all" ]] || [[ "${target}" == '*' ]]; then
+        # Remove :cgo or :nocgo suffix
+        local base_target="${target%:*}"
+        if [[ "${base_target}" == "all" ]] || [[ "${base_target}" == '*' ]]; then
             echo "${ALLOWED_PLATFORMS}"
             return 0
-        elif [[ "${target}" == *\** ]]; then
+        elif [[ "${base_target}" == *\** ]]; then
             for tmp_var in ${ALLOWED_PLATFORMS//,/ }; do
-                [[ "${tmp_var}" == ${target} ]] && expanded_targets="${expanded_targets},${tmp_var}"
+                [[ "${tmp_var}" == ${base_target} ]] && expanded_targets="${expanded_targets},${tmp_var}:${target##*:}"
             done
-        elif [[ "${target}" != */* ]]; then
-            expanded_targets="${expanded_targets},$(expandTargets "${target}/*")"
+        elif [[ "${base_target}" != */* ]]; then
+            expanded_targets="${expanded_targets},$(expandTargets "${base_target}/*")"
         else
-            expanded_targets="${expanded_targets},${target}"
+            expanded_targets="${expanded_targets},${base_target}:${target##*:}"
         fi
     done
     removeDuplicateTargets "${expanded_targets}"
@@ -1225,7 +1239,7 @@ function autoBuild() {
     fi
     local build_num=0
     for target in ${targets//,/ }; do
-        buildTarget "${target}"
+        buildTarget "${target}" # Ensure the full target with suffix is passed
         build_num=$((build_num + 1))
     done
     local end_time=$(date +%s)
