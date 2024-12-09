@@ -158,12 +158,7 @@ function addBuildArgs() {
 
 # Fixes and validates command-line arguments and sets default values.
 function fixArgs() {
-    echo -e "${COLOR_LIGHT_BLUE}Working directory: ${COLOR_LIGHT_GREEN}$(pwd)${COLOR_RESET}"
-    echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}"
-
     setDefault "RESULT_DIR" "${SOURCE_DIR}/build"
-    mkdir -p "${RESULT_DIR}"
-    RESULT_DIR="$(cd "${RESULT_DIR}" && pwd)"
     echo -e "${COLOR_LIGHT_BLUE}Result directory: ${COLOR_LIGHT_GREEN}${RESULT_DIR}${COLOR_RESET}"
 
     setDefault "BIN_NAME" "$(basename "${SOURCE_DIR}")"
@@ -1272,9 +1267,7 @@ function autoBuild() {
 
 # Loads the build configuration file if it exists.
 function loadBuildConfig() {
-    load_build_config=""
     if [[ -f "${BUILD_CONFIG}" ]]; then
-        echo -e "${COLOR_LIGHT_BLUE}Config file: ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}" 1>&2
         source "${BUILD_CONFIG}" && return 0
         echo -e "${COLOR_LIGHT_RED}Failed to load build configuration from ${BUILD_CONFIG}${COLOR_RESET}" 1>&2
         exit 1
@@ -1283,10 +1276,17 @@ function loadBuildConfig() {
     fi
 }
 
+function printVar() {
+    echo -e "${COLOR_LIGHT_BLUE}Working directory: ${COLOR_LIGHT_GREEN}$(pwd)${COLOR_RESET}" 1>&2
+    echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}" 1>&2
+    echo -e "${COLOR_LIGHT_BLUE}Config file: ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}" 1>&2
+}
+
 setDefault "SOURCE_DIR" "${DEFAULT_SOURCE_DIR}"
 SOURCE_DIR="$(cd "${SOURCE_DIR}" && pwd)"
 setDefault "BUILD_CONFIG" "${SOURCE_DIR}/build.config.sh"
 
+printVar
 loadBuildConfig
 
 # Parse command-line arguments.
