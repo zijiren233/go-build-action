@@ -98,6 +98,7 @@ runs:
     - id: get_targets
       if: ${{ inputs.show-all-targets != 'false' }}
       shell: bash
+      working-directory: ${{ github.workspace }}
       run: |
         export SOURCE_DIR="${{ inputs.source-dir }}"
         targets=${{ inputs.show-all-targets != 'true' && inputs.show-all-targets || '' }}
@@ -117,6 +118,7 @@ runs:
     - id: build
       if: ${{ inputs.show-all-targets == 'false' }}
       shell: bash
+      working-directory: ${{ github.workspace }}
       run: |
         export SOURCE_DIR="${{ inputs.source-dir }}"
         BUILD_CONFIG="${{ inputs.build-config }}" "${{ github.action_path }}/build.sh" \

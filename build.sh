@@ -159,6 +159,7 @@ function addBuildArgs() {
 # Fixes and validates command-line arguments and sets default values.
 function fixArgs() {
     echo -e "${COLOR_LIGHT_BLUE}Working directory: ${COLOR_LIGHT_GREEN}$(pwd)${COLOR_RESET}"
+    echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}"
     if loadedBuildConfig; then
         echo -e "${COLOR_LIGHT_GREEN}Loaded build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
     fi
