@@ -160,11 +160,6 @@ function addBuildArgs() {
 function fixArgs() {
     echo -e "${COLOR_LIGHT_BLUE}Working directory: ${COLOR_LIGHT_GREEN}$(pwd)${COLOR_RESET}"
     echo -e "${COLOR_LIGHT_BLUE}Source directory: ${COLOR_LIGHT_GREEN}${SOURCE_DIR}${COLOR_RESET}"
-    if [[ -f "${BUILD_CONFIG}" ]]; then
-        echo -e "${COLOR_LIGHT_BLUE}Config file: ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}"
-    else
-        echo -e "${COLOR_LIGHT_YELLOW}Skipping config (file not found): ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}"
-    fi
 
     setDefault "RESULT_DIR" "${SOURCE_DIR}/build"
     mkdir -p "${RESULT_DIR}"
@@ -1279,9 +1274,12 @@ function autoBuild() {
 function loadBuildConfig() {
     load_build_config=""
     if [[ -f "${BUILD_CONFIG}" ]]; then
+        echo -e "${COLOR_LIGHT_BLUE}Config file: ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}" 1>&2
         source "${BUILD_CONFIG}" && return 0
-        echo -e "${COLOR_LIGHT_RED}Failed to load build configuration from ${BUILD_CONFIG}${COLOR_RESET}"
+        echo -e "${COLOR_LIGHT_RED}Failed to load build configuration from ${BUILD_CONFIG}${COLOR_RESET}" 1>&2
         exit 1
+    else
+        echo -e "${COLOR_LIGHT_YELLOW}Skipping config (file not found): ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}" 1>&2
     fi
 }
 
