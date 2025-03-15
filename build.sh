@@ -1082,6 +1082,10 @@ function extension() {
     fi
 }
 
+function cleanBuildCache() {
+    go clean -cache
+}
+
 # Builds a target for a specific target, micro architecture variant, and build environment.
 # Arguments:
 #   $1: GOOS
@@ -1089,6 +1093,8 @@ function extension() {
 #   $3: Micro architecture variant (e.g., "sse2", "softfloat"). Ref: https://go.dev/wiki/MinimumRequirements#microarchitecture-support
 #   $4: CGO enabled (0 or 1)
 function buildTargetWithMicro() {
+    cleanBuildCache
+
     local goos="$1"
     local _goarch="$2"
     local goarch="${_goarch%%-*}"
