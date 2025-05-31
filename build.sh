@@ -26,7 +26,7 @@ readonly DEFAULT_CXX="g++"
 readonly DEFAULT_CROSS_COMPILER_DIR="$(dirname $(mktemp -u))/cross"
 readonly DEFAULT_CGO_FLAGS="-O2 -g0 -pipe"
 readonly DEFAULT_CGO_LDFLAGS="-s"
-readonly DEFAULT_LDFLAGS="-s -w -d -linkmode auto"
+readonly DEFAULT_LDFLAGS="-s -w -linkmode auto"
 readonly DEFAULT_EXT_LDFLAGS=""
 readonly DEFAULT_CGO_DEPS_VERSION="v0.5.6"
 readonly DEFAULT_TTY_WIDTH="40"
@@ -1181,13 +1181,19 @@ function buildTargetWithMicro() {
         build_env+=("CGO_ENABLED=0")
     fi
 
+    local ldflags="${LDFLAGS}"
+    if [[ "${goos}" == "linux" ]]; then
+        ldflags="${ldflags} -d"
+    fi
+    local full_ldflags="${ldflags}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}"
+
     echo -e "${COLOR_LIGHT_BLUE}Run command:${COLOR_RESET}\n$(for var in "${build_env[@]}"; do
         key=$(echo "${var}" | cut -d= -f1)
         value=$(echo "${var}" | cut -d= -f2-)
         echo -e "${COLOR_LIGHT_GREEN}export${COLOR_RESET} ${COLOR_WHITE}${key}='${value}'${COLOR_RESET}"
-    done)\n${COLOR_LIGHT_CYAN}go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags \"${TAGS}\" -ldflags \"${LDFLAGS}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}\" -o \"${target_file}\" \"${SOURCE_DIR}\"${COLOR_RESET}"
+    done)\n${COLOR_LIGHT_CYAN}go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags \"${TAGS}\" -ldflags \"${full_ldflags}\" -o \"${target_file}\" \"${SOURCE_DIR}\"${COLOR_RESET}"
     local start_time=$(date +%s)
-    env "${build_env[@]}" go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags "${TAGS}" -ldflags "${LDFLAGS}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}" -o "${target_file}" "${SOURCE_DIR}"
+    env "${build_env[@]}" go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags "${TAGS}" -ldflags "${full_ldflags}" -o "${target_file}" "${SOURCE_DIR}"
     local end_time=$(date +%s)
     echo -e "${COLOR_LIGHT_GREEN}Build successful: ${goos}/${goarch}${micro:+ ${micro}}  (took $((end_time - start_time))s)${COLOR_RESET}"
 }
