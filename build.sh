@@ -31,7 +31,6 @@ readonly DEFAULT_EXT_LDFLAGS=""
 readonly DEFAULT_CGO_DEPS_VERSION="v0.5.6"
 readonly DEFAULT_TTY_WIDTH="40"
 readonly DEFAULT_NDK_VERSION="r27"
-readonly DEFAULT_GO_CLEAN_CACHE="false"
 
 # Go environment variables
 readonly GOHOSTOS="$(go env GOHOSTOS)"
@@ -65,7 +64,6 @@ function printEnvHelp() {
     echo -e "  ${COLOR_LIGHT_CYAN}FORCE_CC${COLOR_RESET}           - Force the use of a specific C compiler"
     echo -e "  ${COLOR_LIGHT_CYAN}FORCE_CXX${COLOR_RESET}          - Force the use of a specific C++ compiler"
     echo -e "  ${COLOR_LIGHT_CYAN}GH_PROXY${COLOR_RESET}           - Set the GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
-    echo -e "  ${COLOR_LIGHT_CYAN}GO_CLEAN_CACHE${COLOR_RESET}      - Clean Go build cache before building (default: ${DEFAULT_GO_CLEAN_CACHE})"
     echo -e "  ${COLOR_LIGHT_CYAN}HOST_CC${COLOR_RESET}            - Set the host C compiler (default: ${DEFAULT_CC})"
     echo -e "  ${COLOR_LIGHT_CYAN}HOST_CXX${COLOR_RESET}           - Set the host C++ compiler (default: ${DEFAULT_CXX})"
     echo -e "  ${COLOR_LIGHT_CYAN}NDK_VERSION${COLOR_RESET}        - Set the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
@@ -183,7 +181,6 @@ function fixArgs() {
     setDefault "CGO_FLAGS" "${DEFAULT_CGO_FLAGS}"
     setDefault "CGO_LDFLAGS" "${DEFAULT_CGO_LDFLAGS}"
     setDefault "NDK_VERSION" "${DEFAULT_NDK_VERSION}"
-    setDefault "GO_CLEAN_CACHE" "${DEFAULT_GO_CLEAN_CACHE}"
 }
 
 # Checks if CGO is enabled.
@@ -950,6 +947,8 @@ function buildTarget() {
 
     echo -e "${COLOR_LIGHT_GRAY}$(printSeparator)${COLOR_RESET}"
 
+    cleanBuildCache
+
     buildTargetWithMicro "${goos}" "${goarch}" ""
 
     if [ -z "${ENABLE_MICRO}" ]; then
@@ -1093,8 +1092,6 @@ function cleanBuildCache() {
 #   $3: Micro architecture variant (e.g., "sse2", "softfloat"). Ref: https://go.dev/wiki/MinimumRequirements#microarchitecture-support
 #   $4: CGO enabled (0 or 1)
 function buildTargetWithMicro() {
-    cleanBuildCache
-
     local goos="$1"
     local _goarch="$2"
     local goarch="${_goarch%%-*}"
@@ -1148,11 +1145,6 @@ function buildTargetWithMicro() {
     esac
 
     echo -e "${COLOR_LIGHT_MAGENTA}Building ${goos}/${goarch}${micro:+/${micro}}...${COLOR_RESET}"
-
-    if [[ "${GO_CLEAN_CACHE}" == "true" ]]; then
-        echo -e "${COLOR_LIGHT_BLUE}Cleaning Go build cache...${COLOR_RESET}"
-        go clean -cache
-    fi
 
     if isCGOEnabled; then
         if initCGODeps "${goos}" "${_goarch}" "${micro}"; then
@@ -1346,9 +1338,6 @@ while [[ $# -gt 0 ]]; do
         ;;
     --ndk-version=*)
         NDK_VERSION="${1#*=}"
-        ;;
-    --go-clean-cache)
-        GO_CLEAN_CACHE="true"
         ;;
     *)
         if declare -f parseDepArgs >/dev/null && parseDepArgs "$1"; then
