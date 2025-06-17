@@ -25,7 +25,7 @@ inputs:
   bin-name-no-suffix:
     description: "Do not append architecture suffix to binary name"
     required: false
-  more-go-cmd-args:
+  add-go-build-args:
     description: "Additional Go command arguments"
     required: false
   targets:
@@ -83,6 +83,24 @@ inputs:
     description: "Show all supported targets"
     required: false
     default: "false"
+  flag-race:
+    description: "enable data race detection. Supported only on linux/amd64, freebsd/amd64, darwin/amd64, darwin/arm64, windows/amd64, linux/ppc64le and linux/arm64 (only for 48-bit VMA)."
+    required: false
+  flag-a:
+    description: "force rebuilding of packages that are already up-to-date."
+    required: false
+  flag-n:
+    description: "print the commands but do not run them."
+    required: false
+  flag-x:
+    description: "print the commands."
+    required: false
+  flag-v:
+    description: "print the names of packages as they are compiled."
+    required: false
+  flag-work:
+    description: "print the name of the temporary work directory and do not delete it when exiting."
+    required: false
   config-args:
     description: "Additional build configuration arguments"
     required: false
@@ -130,7 +148,7 @@ runs:
           ${{ inputs.buildmode != '' && format('--buildmode=''{0}''', inputs.buildmode) || '' }} \
           ${{ inputs.bin-name != '' && format('--bin-name=''{0}''', inputs.bin-name) || '' }} \
           ${{ inputs.bin-name-no-suffix == 'true' && '--bin-name-no-suffix' || '' }} \
-          ${{ inputs.more-go-cmd-args != '' && format('--more-go-cmd-args=''{0}''', inputs.more-go-cmd-args) || '' }} \
+          ${{ inputs.add-go-build-args != '' && format('--add-go-build-args=''{0}''', inputs.add-go-build-args) || '' }} \
           ${{ inputs.targets != '' && format('--targets=''{0}''', inputs.targets) || '' }} \
           ${{ inputs.force-cgo == 'true' && '--force-cgo' || '' }} \
           ${{ inputs.force-gcc != '' && format('--force-gcc=''{0}''', inputs.force-gcc) || '' }} \
@@ -147,4 +165,10 @@ runs:
           ${{ inputs.ndk-version != '' && format('--ndk-version=''{0}''', inputs.ndk-version) || '' }} \
           ${{ inputs.go-clean-cache == 'true' && '--go-clean-cache' || '' }} \
           ${{ inputs.enable-micro == 'true' && '--enable-micro' || '' }} \
+          ${{ inputs.flag-race == 'true' && '--add-go-build-args=-race' || '' }} \
+          ${{ inputs.flag-a == 'true' && '--add-go-build-args=-a' || '' }} \
+          ${{ inputs.flag-n == 'true' && '--add-go-build-args=-n' || '' }} \
+          ${{ inputs.flag-x == 'true' && '--add-go-build-args=-x' || '' }} \
+          ${{ inputs.flag-v == 'true' && '--add-go-build-args=-v' || '' }} \
+          ${{ inputs.flag-work == 'true' && '--add-go-build-args=-work' || '' }} \
           ${{ inputs.config-args != '' && inputs.config-args || '' }}

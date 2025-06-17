@@ -100,7 +100,7 @@ function printHelp() {
     echo -e "  ${COLOR_LIGHT_BLUE}--host-gcc=<path>${COLOR_RESET}              - Specify the host C compiler (default: ${DEFAULT_CC})"
     echo -e "  ${COLOR_LIGHT_BLUE}--host-gxx=<path>${COLOR_RESET}              - Specify the host C++ compiler (default: ${DEFAULT_CXX})"
     echo -e "  ${COLOR_LIGHT_BLUE}--ldflags='<flags>'${COLOR_RESET}            - Set linker flags (default: \"${DEFAULT_LDFLAGS}\")"
-    echo -e "  ${COLOR_LIGHT_BLUE}--more-go-cmd-args='<args>'${COLOR_RESET}    - Pass additional arguments to the 'go build' command"
+    echo -e "  ${COLOR_LIGHT_BLUE}--add-go-build-args='<args>'${COLOR_RESET}    - Pass additional arguments to the 'go build' command"
     echo -e "  ${COLOR_LIGHT_BLUE}--ndk-version=<version>${COLOR_RESET}        - Specify the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
     echo -e "  ${COLOR_LIGHT_BLUE}-t=<targets>, --targets=<targets>${COLOR_RESET} - Specify target target(s) (default: host target, supports: all, linux, linux/arm*, ...)"
     echo -e "  ${COLOR_LIGHT_BLUE}--result-dir=<dir>${COLOR_RESET}             - Specify the build result directory (default: ${DEFAULT_RESULT_DIR})"
@@ -1289,7 +1289,7 @@ while [[ $# -gt 0 ]]; do
     --bin-name-no-suffix)
         BIN_NAME_NO_SUFFIX="true"
         ;;
-    --more-go-cmd-args=*)
+    --add-go-build-args=*)
         addBuildArgs "${1#*=}"
         ;;
     --enable-micro)
