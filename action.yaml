@@ -37,17 +37,14 @@ inputs:
   force-cgo:
     description: "Force use of CGO"
     required: false
-  force-gcc:
-    description: "Force specific C compiler"
+  cc:
+    description: "Force set the specific C compiler"
     required: false
-  force-gxx:
-    description: "Force specific C++ compiler"
+  cxx:
+    description: "Force set the specific C++ compiler"
     required: false
-  host-gcc:
-    description: "Host C compiler path"
-    required: false
-  host-gxx:
-    description: "Host C++ compiler path"
+  use-default-cc-cxx:
+    description: "Use the default C and C++ compilers"
     required: false
   cgo-flags:
     description: "CGO compiler flags"
@@ -128,11 +125,9 @@ runs:
           ${{ inputs.bin-name-no-suffix == 'true' && '--bin-name-no-suffix' || '' }} \
           ${{ inputs.add-go-build-args != '' && format('--add-go-build-args=''{0}''', inputs.add-go-build-args) || '' }} \
           ${{ inputs.targets != '' && format('--targets=''{0}''', inputs.targets) || '' }} \
-          ${{ inputs.force-cgo == 'true' && '--force-cgo' || '' }} \
-          ${{ inputs.force-gcc != '' && format('--force-gcc=''{0}''', inputs.force-gcc) || '' }} \
-          ${{ inputs.force-gxx != '' && format('--force-gxx=''{0}''', inputs.force-gxx) || '' }} \
-          ${{ inputs.host-gcc != '' && format('--host-gcc=''{0}''', inputs.host-gcc) || '' }} \
-          ${{ inputs.host-gxx != '' && format('--host-gxx=''{0}''', inputs.host-gxx) || '' }} \
+          ${{ inputs.use-default-cc-cxx == 'true' && '--use-default-cc-cxx' || '' }} \
+          ${{ inputs.cc != '' && format('--cc=''{0}''', inputs.cc) || '' }} \
+          ${{ inputs.cxx != '' && format('--cxx=''{0}''', inputs.cxx) || '' }} \
           ${{ inputs.cgo-flags != '' && format('--cgo-flags=''{0}''', inputs.cgo-flags) || '' }} \
           ${{ inputs.cgo-ldflags != '' && format('--cgo-ldflags=''{0}''', inputs.cgo-ldflags) || '' }} \
           ${{ inputs.tags != '' && format('--tags=''{0}''', inputs.tags) || '' }} \
@@ -141,7 +136,6 @@ runs:
           ${{ inputs.github-proxy-mirror != '' && format('--github-proxy-mirror=''{0}''', inputs.github-proxy-mirror) || '' }} \
           ${{ inputs.cross-compiler-dir != '' && format('--cross-compiler-dir=''{0}''', inputs.cross-compiler-dir) || '' }} \
           ${{ inputs.ndk-version != '' && format('--ndk-version=''{0}''', inputs.ndk-version) || '' }} \
-          ${{ inputs.go-clean-cache == 'true' && '--go-clean-cache' || '' }} \
           ${{ inputs.enable-micro == 'true' && '--enable-micro' || '' }} \
           ${{ inputs.flag-race == 'true' && '--add-go-build-args=-race' || '' }} \
           ${{ inputs.flag-a == 'true' && '--add-go-build-args=-a' || '' }} \

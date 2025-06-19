@@ -19,8 +19,6 @@ readonly DEFAULT_SOURCE_DIR="$(pwd)"
 readonly DEFAULT_RESULT_DIR="${DEFAULT_SOURCE_DIR}/build"
 readonly DEFAULT_BUILD_CONFIG="${DEFAULT_SOURCE_DIR}/build.config.sh"
 readonly DEFAULT_BUILDMODE="default"
-readonly DEFAULT_CC="gcc"
-readonly DEFAULT_CXX="g++"
 readonly DEFAULT_CROSS_COMPILER_DIR="$(dirname $(mktemp -u))/go-cross-compiler"
 readonly DEFAULT_CGO_FLAGS="-O2 -g0 -pipe"
 readonly DEFAULT_CGO_LDFLAGS="-s"
@@ -37,6 +35,8 @@ readonly GOHOSTPLATFORM="${GOHOSTOS}/${GOHOSTARCH}"
 readonly GOVERSION="$(go env GOVERSION | sed 's/^go//')" # e.g 1.23.1
 readonly GODISTLIST="$(go tool dist list)"
 readonly DEFAULT_CGO_ENABLED="$(go env CGO_ENABLED)"
+readonly DEFAULT_CC="$(go env CC)"
+readonly DEFAULT_CXX="$(go env CXX)"
 
 # Prints help information about build configuration.
 function printBuildConfigHelp() {
@@ -60,11 +60,9 @@ function printEnvHelp() {
     echo -e "  ${COLOR_LIGHT_CYAN}CGO_LDFLAGS${COLOR_RESET}        - Set CGO linker flags (default: ${DEFAULT_CGO_LDFLAGS})"
     echo -e "  ${COLOR_LIGHT_CYAN}CROSS_COMPILER_DIR${COLOR_RESET} - Set the cross compiler directory (default: ${DEFAULT_CROSS_COMPILER_DIR})"
     echo -e "  ${COLOR_LIGHT_CYAN}ENABLE_MICRO${COLOR_RESET}       - Enable building micro variants"
-    echo -e "  ${COLOR_LIGHT_CYAN}FORCE_CC${COLOR_RESET}           - Force the use of a specific C compiler"
-    echo -e "  ${COLOR_LIGHT_CYAN}FORCE_CXX${COLOR_RESET}          - Force the use of a specific C++ compiler"
     echo -e "  ${COLOR_LIGHT_CYAN}GH_PROXY${COLOR_RESET}           - Set the GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
-    echo -e "  ${COLOR_LIGHT_CYAN}HOST_CC${COLOR_RESET}            - Set the host C compiler (default: ${DEFAULT_CC})"
-    echo -e "  ${COLOR_LIGHT_CYAN}HOST_CXX${COLOR_RESET}           - Set the host C++ compiler (default: ${DEFAULT_CXX})"
+    echo -e "  ${COLOR_LIGHT_CYAN}CC${COLOR_RESET}                 - Force set the use of a specific C compiler"
+    echo -e "  ${COLOR_LIGHT_CYAN}CXX${COLOR_RESET}                - Force set the use of a specific C++ compiler"
     echo -e "  ${COLOR_LIGHT_CYAN}NDK_VERSION${COLOR_RESET}        - Set the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
     echo -e "  ${COLOR_LIGHT_CYAN}PLATFORM${COLOR_RESET}           - Set the target target(s) (default: host target, supports: all, linux, linux/arm*, ...)"
     echo -e "  ${COLOR_LIGHT_CYAN}RESULT_DIR${COLOR_RESET}         - Set the build result directory (default: ${DEFAULT_RESULT_DIR})"
@@ -92,14 +90,11 @@ function printHelp() {
     echo -e "  ${COLOR_LIGHT_BLUE}-eh, --env-help${COLOR_RESET}                   - Display help information about environment variables"
     echo -e "  ${COLOR_LIGHT_BLUE}--enable-micro${COLOR_RESET}                    - Enable building micro architecture variants"
     echo -e "  ${COLOR_LIGHT_BLUE}--ext-ldflags='<flags>'${COLOR_RESET}           - Set external linker flags (default: \"${DEFAULT_EXT_LDFLAGS}\")"
-    echo -e "  ${COLOR_LIGHT_BLUE}--force-cgo${COLOR_RESET}                       - Force the use of CGO"
-    echo -e "  ${COLOR_LIGHT_BLUE}--force-gcc=<path>${COLOR_RESET}                - Force the use of a specific C compiler"
-    echo -e "  ${COLOR_LIGHT_BLUE}--force-gxx=<path>${COLOR_RESET}                - Force the use of a specific C++ compiler"
+    echo -e "  ${COLOR_LIGHT_BLUE}--cc=<path>${COLOR_RESET}                       - Force set the use of a specific C compiler"
+    echo -e "  ${COLOR_LIGHT_BLUE}--cxx=<path>${COLOR_RESET}                      - Force set the use of a specific C++ compiler"
+    echo -e "  ${COLOR_LIGHT_BLUE}--use-default-cc-cxx${COLOR_RESET}              - Use the default C and C++ compilers (${DEFAULT_CC} and ${DEFAULT_CXX})"
     echo -e "  ${COLOR_LIGHT_BLUE}--github-proxy-mirror=<url>${COLOR_RESET}       - Use a GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
-    echo -e "  ${COLOR_LIGHT_BLUE}--go-clean-cache${COLOR_RESET}                  - Clean Go build cache before building"
     echo -e "  ${COLOR_LIGHT_BLUE}-h, --help${COLOR_RESET}                        - Display this help message"
-    echo -e "  ${COLOR_LIGHT_BLUE}--host-gcc=<path>${COLOR_RESET}                 - Specify the host C compiler (default: ${DEFAULT_CC})"
-    echo -e "  ${COLOR_LIGHT_BLUE}--host-gxx=<path>${COLOR_RESET}                 - Specify the host C++ compiler (default: ${DEFAULT_CXX})"
     echo -e "  ${COLOR_LIGHT_BLUE}--ldflags='<flags>'${COLOR_RESET}               - Set linker flags (default: \"${DEFAULT_LDFLAGS}\")"
     echo -e "  ${COLOR_LIGHT_BLUE}--add-go-build-args='<args>'${COLOR_RESET}      - Pass additional arguments to the 'go build' command"
     echo -e "  ${COLOR_LIGHT_BLUE}--ndk-version=<version>${COLOR_RESET}           - Specify the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
@@ -169,10 +164,6 @@ function fixArgs() {
     setDefault "PLATFORMS" "${GOHOSTPLATFORM}"
     setDefault "BUILDMODE" "${DEFAULT_BUILDMODE}"
     setDefault "ENABLE_MICRO" ""
-    setDefault "HOST_CC" "${DEFAULT_CC}"
-    setDefault "HOST_CXX" "${DEFAULT_CXX}"
-    setDefault "FORCE_CC" ""
-    setDefault "FORCE_CXX" ""
     setDefault "GH_PROXY" ""
     setDefault "TAGS" ""
     setDefault "LDFLAGS" "${DEFAULT_LDFLAGS}"
@@ -326,8 +317,8 @@ function checkTargets() {
 }
 
 function resetCGO() {
-    CC=""
-    CXX=""
+    _CC=""
+    _CXX=""
     MORE_CGO_CFLAGS=""
     MORE_CGO_CXXFLAGS=""
     MORE_CGO_LDFLAGS=""
@@ -350,12 +341,13 @@ function initCGODeps() {
     local goarch="$2"
     local micro="$3"
 
-    if [[ -n "${FORCE_CC}" ]] && [[ -n "${FORCE_CXX}" ]]; then
-        CC="${FORCE_CC}"
-        CXX="${FORCE_CXX}"
+    if [[ -n "${CC}" ]] && [[ -n "${CXX}" ]]; then
+        _CC="${CC}"
+        _CXX="${CXX}"
+        absCCCXX || return $?
         return 0
-    elif [[ -n "${FORCE_CC}" ]] || [[ -n "${FORCE_CXX}" ]]; then
-        echo -e "${COLOR_LIGHT_RED}Both FORCE_CC and FORCE_CXX must be set at the same time.${COLOR_RESET}"
+    elif [[ -n "${CC}" ]] || [[ -n "${CXX}" ]]; then
+        echo -e "${COLOR_LIGHT_RED}Both CC and CXX must be set at the same time.${COLOR_RESET}"
         return 2
     fi
 
@@ -368,22 +360,22 @@ function initCGODeps() {
 
 function absCCCXX() {
     local cc_command cc_options
-    read -r cc_command cc_options <<<"${CC}"
-    CC="$(command -v "${cc_command}")" || return 2
-    [[ -n "${cc_options}" ]] && CC="${CC} ${cc_options}"
+    read -r cc_command cc_options <<<"${_CC}"
+    _CC="$(command -v "${cc_command}")" || return 2
+    [[ -n "${cc_options}" ]] && _CC="${_CC} ${cc_options}"
 
     local cxx_command cxx_options
-    read -r cxx_command cxx_options <<<"${CXX}"
-    CXX="$(command -v "${cxx_command}")" || return 2
-    [[ -n "${cxx_options}" ]] && CXX="${CXX} ${cxx_options}"
+    read -r cxx_command cxx_options <<<"${_CXX}"
+    _CXX="$(command -v "${cxx_command}")" || return 2
+    [[ -n "${cxx_options}" ]] && _CXX="${_CXX} ${cxx_options}"
 
     return 0
 }
 
 # Initializes CGO dependencies for the host target.
 function initHostCGODeps() {
-    CC="${HOST_CC}"
-    CXX="${HOST_CXX}"
+    _CC="${HOST_CC}"
+    _CXX="${HOST_CXX}"
 }
 
 # Initializes default CGO dependencies based on the target operating system, architecture, and micro architecture.
@@ -582,22 +574,22 @@ function initIosCGO() {
             local sdk_path
             sdk_path=$(xcrun -sdk iphonesimulator --show-sdk-path)
             [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS simulator SDK path.${COLOR_RESET}" && return 1
-            CC="clang -arch x86_64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
-            CXX="clang++ -arch x86_64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
+            _CC="clang -arch x86_64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
+            _CXX="clang++ -arch x86_64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
             ;;
         "arm64-sim"*)
             local sdk_path
             sdk_path=$(xcrun -sdk iphonesimulator --show-sdk-path)
             [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS simulator SDK path.${COLOR_RESET}" && return 1
-            CC="clang -arch arm64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
-            CXX="clang++ -arch arm64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
+            _CC="clang -arch arm64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
+            _CXX="clang++ -arch arm64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
             ;;
         "arm64")
             local sdk_path
             sdk_path=$(xcrun -sdk iphoneos --show-sdk-path)
             [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS SDK path.${COLOR_RESET}" && return 1
-            CC="clang -arch arm64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
-            CXX="clang++ -arch arm64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
+            _CC="clang -arch arm64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
+            _CXX="clang++ -arch arm64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
             ;;
         *)
             echo -e "${COLOR_LIGHT_YELLOW}Unknown ios architecture: ${goarch}${COLOR_RESET}"
@@ -642,8 +634,8 @@ function initIosCGO() {
                 echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
                 return 2
             fi
-            CC="${cc}"
-            CXX="${cxx}"
+            _CC="${cc}"
+            _CXX="${cxx}"
             ;;
         "arm64")
             local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
@@ -679,8 +671,8 @@ function initIosCGO() {
                 echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
                 return 2
             fi
-            CC="${cc}"
-            CXX="${cxx}"
+            _CC="${cc}"
+            _CXX="${cxx}"
             ;;
         *)
             echo -e "${COLOR_LIGHT_YELLOW}Cross compiler not supported for ${GOHOSTOS}/${GOHOSTARCH}.${COLOR_RESET}"
@@ -704,15 +696,15 @@ function initOsxCGO() {
             local sdk_path
             sdk_path=$(xcrun -sdk macosx --show-sdk-path)
             [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get macOS SDK path.${COLOR_RESET}" && return 1
-            CC="clang -arch x86_64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
-            CXX="clang++ -arch x86_64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
+            _CC="clang -arch x86_64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
+            _CXX="clang++ -arch x86_64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
             ;;
         "arm64")
             local sdk_path
             sdk_path=$(xcrun -sdk macosx --show-sdk-path)
             [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get macOS SDK path.${COLOR_RESET}" && return 1
-            CC="clang -arch arm64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
-            CXX="clang++ -arch arm64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
+            _CC="clang -arch arm64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
+            _CXX="clang++ -arch arm64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
             ;;
         *)
             echo -e "${COLOR_LIGHT_YELLOW}Unknown darwin architecture: ${goarch}${COLOR_RESET}"
@@ -756,8 +748,8 @@ function initOsxCGO() {
                 echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
                 return 2
             fi
-            CC="${cc}"
-            CXX="${cxx}"
+            _CC="${cc}"
+            _CXX="${cxx}"
             ;;
         "arm64")
             local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
@@ -793,8 +785,8 @@ function initOsxCGO() {
                 echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
                 return 2
             fi
-            CC="${cc}"
-            CXX="${cxx}"
+            _CC="${cc}"
+            _CXX="${cxx}"
             ;;
         *)
             echo -e "${COLOR_LIGHT_YELLOW}Cross compiler not supported for ${GOHOSTOS}/${GOHOSTARCH}.${COLOR_RESET}"
@@ -844,8 +836,8 @@ function initLinuxCGO() {
         return 2
     fi
 
-    CC="${cc} -static --static"
-    CXX="${cxx} -static --static"
+    _CC="${cc} -static --static"
+    _CXX="${cxx} -static --static"
 }
 
 # Initializes CGO dependencies for Windows.
@@ -879,8 +871,8 @@ function initWindowsCGO() {
         return 2
     fi
 
-    CC="${cc} -static --static"
-    CXX="${cxx} -static --static"
+    _CC="${cc} -static --static"
+    _CXX="${cxx} -static --static"
 }
 
 # Initializes CGO dependencies for Android NDK.
@@ -907,8 +899,8 @@ function initAndroidNDK() {
         return 2
     fi
 
-    CC="${cc}"
-    CXX="${cxx}"
+    _CC="${cc}"
+    _CXX="${cxx}"
 }
 
 # Gets the Clang host prefix for Android NDK.
@@ -1237,8 +1229,8 @@ function buildTargetWithMicro() {
         case "$code" in
         0)
             build_env+=("CGO_ENABLED=1")
-            build_env+=("CC=${CC}")
-            build_env+=("CXX=${CXX}")
+            build_env+=("CC=${_CC}")
+            build_env+=("CXX=${_CXX}")
             build_env+=("CGO_CFLAGS=${CGO_FLAGS}${MORE_CGO_CFLAGS:+ ${MORE_CGO_CFLAGS}}")
             build_env+=("CGO_CXXFLAGS=${CGO_FLAGS}${MORE_CGO_CXXFLAGS:+ ${MORE_CGO_CXXFLAGS}}")
             build_env+=("CGO_LDFLAGS=${CGO_LDFLAGS}${MORE_CGO_LDFLAGS:+ ${MORE_CGO_LDFLAGS}}")
@@ -1416,17 +1408,15 @@ while [[ $# -gt 0 ]]; do
     --cross-compiler-dir=*)
         CROSS_COMPILER_DIR="${1#*=}"
         ;;
-    --force-gcc=*)
-        FORCE_CC="${1#*=}"
+    --cc=*)
+        CC="${1#*=}"
         ;;
-    --force-gxx=*)
-        FORCE_CXX="${1#*=}"
+    --cxx=*)
+        CXX="${1#*=}"
         ;;
-    --host-gcc=*)
-        HOST_CC="${1#*=}"
-        ;;
-    --host-gxx=*)
-        HOST_CXX="${1#*=}"
+    --use-default-cc-cxx)
+        CC="${DEFAULT_CC}"
+        CXX="${DEFAULT_CXX}"
         ;;
     --ndk-version=*)
         NDK_VERSION="${1#*=}"
