@@ -1244,11 +1244,7 @@ function buildTargetWithMicro() {
         build_env+=("CGO_ENABLED=0")
     fi
 
-    local ldflags="${LDFLAGS}"
-    if [[ "${goos}" == "linux" ]]; then
-        ldflags="${ldflags} -d"
-    fi
-    local full_ldflags="${ldflags}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}"
+    local full_ldflags="${LDFLAGS}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}"
 
     echo -e "${COLOR_LIGHT_BLUE}Run command:${COLOR_RESET}\n$(for var in "${build_env[@]}"; do
         key=$(echo "${var}" | cut -d= -f1)
