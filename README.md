@@ -22,22 +22,6 @@ jobs:
 
 ```yaml
 jobs:
-  get-targets:
-    name: Get targets
-    runs-on: ubuntu-latest
-    outputs:
-      targets: ${{ steps.get-targets.outputs.targets }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Get targets
-        id: get-targets
-        uses: zijiren233/go-build-action@v1
-        with:
-          show-all-targets: true
-          # show-all-targets: *
-          # show-all-targets: linux/*,windows/*
-
   build-targets:
     name: Build targets
     runs-on: ubuntu-latest

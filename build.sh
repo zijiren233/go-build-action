@@ -18,12 +18,10 @@ readonly COLOR_RESET='\033[0m'
 readonly DEFAULT_SOURCE_DIR="$(pwd)"
 readonly DEFAULT_RESULT_DIR="${DEFAULT_SOURCE_DIR}/build"
 readonly DEFAULT_BUILD_CONFIG="${DEFAULT_SOURCE_DIR}/build.config.sh"
-
 readonly DEFAULT_BUILDMODE="default"
-readonly DEFAULT_CGO_ENABLED="0"
 readonly DEFAULT_CC="gcc"
 readonly DEFAULT_CXX="g++"
-readonly DEFAULT_CROSS_COMPILER_DIR="$(dirname $(mktemp -u))/cross"
+readonly DEFAULT_CROSS_COMPILER_DIR="$(dirname $(mktemp -u))/go-cross-compiler"
 readonly DEFAULT_CGO_FLAGS="-O2 -g0 -pipe"
 readonly DEFAULT_CGO_LDFLAGS="-s"
 readonly DEFAULT_LDFLAGS="-s -w -linkmode auto"
@@ -38,12 +36,13 @@ readonly GOHOSTARCH="$(go env GOHOSTARCH)"
 readonly GOHOSTPLATFORM="${GOHOSTOS}/${GOHOSTARCH}"
 readonly GOVERSION="$(go env GOVERSION | sed 's/^go//')" # e.g 1.23.1
 readonly GODISTLIST="$(go tool dist list)"
+readonly DEFAULT_CGO_ENABLED="$(go env CGO_ENABLED)"
 
 # Prints help information about build configuration.
 function printBuildConfigHelp() {
     echo -e "${COLOR_LIGHT_ORANGE}You can customize the build configuration using the following functions (defined in ${DEFAULT_BUILD_CONFIG}):${COLOR_RESET}"
     echo -e "  ${COLOR_LIGHT_GREEN}initDep${COLOR_RESET}          - Initialize dependencies"
-    echo -e "  ${COLOR_LIGHT_GREEN}initDepTargets${COLOR_RESET} - Initialize dependency targets"
+    echo -e "  ${COLOR_LIGHT_GREEN}initDepTargets${COLOR_RESET}   - Initialize dependency targets"
     echo -e "  ${COLOR_LIGHT_GREEN}parseDepArgs${COLOR_RESET}     - Parse dependency arguments"
     echo -e "  ${COLOR_LIGHT_GREEN}printDepEnvHelp${COLOR_RESET}  - Print dependency environment variable help"
     echo -e "  ${COLOR_LIGHT_GREEN}printDepHelp${COLOR_RESET}     - Print dependency help information"
@@ -55,7 +54,7 @@ function printEnvHelp() {
     echo -e "  ${COLOR_LIGHT_CYAN}BIN_NAME${COLOR_RESET}           - Set the binary name (default: source directory basename)"
     echo -e "  ${COLOR_LIGHT_CYAN}BIN_NAME_NO_SUFFIX${COLOR_RESET} - Do not append the architecture suffix to the binary name"
     echo -e "  ${COLOR_LIGHT_CYAN}BUILD_CONFIG${COLOR_RESET}       - Set the build configuration file (default: ${DEFAULT_BUILD_CONFIG})"
-    echo -e "  ${COLOR_LIGHT_CYAN}BUILDMODE${COLOR_RESET}         - Set the build mode (default: ${DEFAULT_BUILDMODE})"
+    echo -e "  ${COLOR_LIGHT_CYAN}BUILDMODE${COLOR_RESET}          - Set the build mode (default: ${DEFAULT_BUILDMODE})"
     echo -e "  ${COLOR_LIGHT_CYAN}CGO_ENABLED${COLOR_RESET}        - Enable or disable CGO (default: ${DEFAULT_CGO_ENABLED})"
     echo -e "  ${COLOR_LIGHT_CYAN}CGO_FLAGS${COLOR_RESET}          - Set CGO flags (default: ${DEFAULT_CGO_FLAGS})"
     echo -e "  ${COLOR_LIGHT_CYAN}CGO_LDFLAGS${COLOR_RESET}        - Set CGO linker flags (default: ${DEFAULT_CGO_LDFLAGS})"
@@ -84,28 +83,30 @@ function printHelp() {
     echo -e "  $(basename "$0") [options]"
     echo -e ""
     echo -e "${COLOR_LIGHT_RED}Options:${COLOR_RESET}"
-    echo -e "  ${COLOR_LIGHT_BLUE}--bin-name=<name>${COLOR_RESET}              - Specify the binary name (default: source directory basename)"
-    echo -e "  ${COLOR_LIGHT_BLUE}--bin-name-no-suffix${COLOR_RESET}           - Do not append the architecture suffix to the binary name"
-    echo -e "  ${COLOR_LIGHT_BLUE}--buildmode=<mode>${COLOR_RESET}            - Set the build mode (default: ${DEFAULT_BUILDMODE})"
-    echo -e "  ${COLOR_LIGHT_BLUE}--cross-compiler-dir=<dir>${COLOR_RESET}     - Specify the cross compiler directory (default: ${DEFAULT_CROSS_COMPILER_DIR})"
-    echo -e "  ${COLOR_LIGHT_BLUE}-eh, --env-help${COLOR_RESET}                - Display help information about environment variables"
-    echo -e "  ${COLOR_LIGHT_BLUE}--enable-micro${COLOR_RESET}                 - Enable building micro architecture variants"
-    echo -e "  ${COLOR_LIGHT_BLUE}--ext-ldflags='<flags>'${COLOR_RESET}        - Set external linker flags (default: \"${DEFAULT_EXT_LDFLAGS}\")"
-    echo -e "  ${COLOR_LIGHT_BLUE}--force-cgo${COLOR_RESET}                    - Force the use of CGO"
-    echo -e "  ${COLOR_LIGHT_BLUE}--force-gcc=<path>${COLOR_RESET}             - Force the use of a specific C compiler"
-    echo -e "  ${COLOR_LIGHT_BLUE}--force-gxx=<path>${COLOR_RESET}             - Force the use of a specific C++ compiler"
-    echo -e "  ${COLOR_LIGHT_BLUE}--github-proxy-mirror=<url>${COLOR_RESET}    - Use a GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
-    echo -e "  ${COLOR_LIGHT_BLUE}--go-clean-cache${COLOR_RESET}               - Clean Go build cache before building"
-    echo -e "  ${COLOR_LIGHT_BLUE}-h, --help${COLOR_RESET}                     - Display this help message"
-    echo -e "  ${COLOR_LIGHT_BLUE}--host-gcc=<path>${COLOR_RESET}              - Specify the host C compiler (default: ${DEFAULT_CC})"
-    echo -e "  ${COLOR_LIGHT_BLUE}--host-gxx=<path>${COLOR_RESET}              - Specify the host C++ compiler (default: ${DEFAULT_CXX})"
-    echo -e "  ${COLOR_LIGHT_BLUE}--ldflags='<flags>'${COLOR_RESET}            - Set linker flags (default: \"${DEFAULT_LDFLAGS}\")"
-    echo -e "  ${COLOR_LIGHT_BLUE}--add-go-build-args='<args>'${COLOR_RESET}    - Pass additional arguments to the 'go build' command"
-    echo -e "  ${COLOR_LIGHT_BLUE}--ndk-version=<version>${COLOR_RESET}        - Specify the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
+    echo -e "  ${COLOR_LIGHT_BLUE}--bin-name=<name>${COLOR_RESET}                 - Specify the binary name (default: source directory basename)"
+    echo -e "  ${COLOR_LIGHT_BLUE}--bin-name-no-suffix${COLOR_RESET}              - Do not append the architecture suffix to the binary name"
+    echo -e "  ${COLOR_LIGHT_BLUE}--buildmode=<mode>${COLOR_RESET}                - Set the build mode (default: ${DEFAULT_BUILDMODE})"
+    echo -e "  ${COLOR_LIGHT_BLUE}--cross-compiler-dir=<dir>${COLOR_RESET}        - Specify the cross compiler directory (default: ${DEFAULT_CROSS_COMPILER_DIR})"
+    echo -e "  ${COLOR_LIGHT_BLUE}--cgo-enabled${COLOR_RESET}                     - Enable CGO (default: ${DEFAULT_CGO_ENABLED})"
+    echo -e "  ${COLOR_LIGHT_BLUE}--cgo-enabled=<value>${COLOR_RESET}             - Set CGO enabled value (default: ${DEFAULT_CGO_ENABLED})"
+    echo -e "  ${COLOR_LIGHT_BLUE}-eh, --env-help${COLOR_RESET}                   - Display help information about environment variables"
+    echo -e "  ${COLOR_LIGHT_BLUE}--enable-micro${COLOR_RESET}                    - Enable building micro architecture variants"
+    echo -e "  ${COLOR_LIGHT_BLUE}--ext-ldflags='<flags>'${COLOR_RESET}           - Set external linker flags (default: \"${DEFAULT_EXT_LDFLAGS}\")"
+    echo -e "  ${COLOR_LIGHT_BLUE}--force-cgo${COLOR_RESET}                       - Force the use of CGO"
+    echo -e "  ${COLOR_LIGHT_BLUE}--force-gcc=<path>${COLOR_RESET}                - Force the use of a specific C compiler"
+    echo -e "  ${COLOR_LIGHT_BLUE}--force-gxx=<path>${COLOR_RESET}                - Force the use of a specific C++ compiler"
+    echo -e "  ${COLOR_LIGHT_BLUE}--github-proxy-mirror=<url>${COLOR_RESET}       - Use a GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
+    echo -e "  ${COLOR_LIGHT_BLUE}--go-clean-cache${COLOR_RESET}                  - Clean Go build cache before building"
+    echo -e "  ${COLOR_LIGHT_BLUE}-h, --help${COLOR_RESET}                        - Display this help message"
+    echo -e "  ${COLOR_LIGHT_BLUE}--host-gcc=<path>${COLOR_RESET}                 - Specify the host C compiler (default: ${DEFAULT_CC})"
+    echo -e "  ${COLOR_LIGHT_BLUE}--host-gxx=<path>${COLOR_RESET}                 - Specify the host C++ compiler (default: ${DEFAULT_CXX})"
+    echo -e "  ${COLOR_LIGHT_BLUE}--ldflags='<flags>'${COLOR_RESET}               - Set linker flags (default: \"${DEFAULT_LDFLAGS}\")"
+    echo -e "  ${COLOR_LIGHT_BLUE}--add-go-build-args='<args>'${COLOR_RESET}      - Pass additional arguments to the 'go build' command"
+    echo -e "  ${COLOR_LIGHT_BLUE}--ndk-version=<version>${COLOR_RESET}           - Specify the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
     echo -e "  ${COLOR_LIGHT_BLUE}-t=<targets>, --targets=<targets>${COLOR_RESET} - Specify target target(s) (default: host target, supports: all, linux, linux/arm*, ...)"
-    echo -e "  ${COLOR_LIGHT_BLUE}--result-dir=<dir>${COLOR_RESET}             - Specify the build result directory (default: ${DEFAULT_RESULT_DIR})"
-    echo -e "  ${COLOR_LIGHT_BLUE}--show-all-targets${COLOR_RESET}           - Display all supported target targets"
-    echo -e "  ${COLOR_LIGHT_BLUE}--tags='<tags>'${COLOR_RESET}                - Set build tags"
+    echo -e "  ${COLOR_LIGHT_BLUE}--result-dir=<dir>${COLOR_RESET}                - Specify the build result directory (default: ${DEFAULT_RESULT_DIR})"
+    echo -e "  ${COLOR_LIGHT_BLUE}--show-all-targets${COLOR_RESET}                - Display all supported target targets"
+    echo -e "  ${COLOR_LIGHT_BLUE}--tags='<tags>'${COLOR_RESET}                   - Set build tags"
 
     if declare -f printDepHelp >/dev/null; then
         echo -e "${COLOR_LIGHT_MAGENTA}$(printSeparator)${COLOR_RESET}"
@@ -613,27 +614,66 @@ function initIosCGO() {
             local cc=${!cc_var}
             local cxx=${!cxx_var}
             if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
-                if command -v oa64-clang >/dev/null 2>&1 && command -v oa64-clang++ >/dev/null 2>&1; then
-                    cc="oa64-clang"
-                    cxx="oa64-clang++"
-                elif [[ -x "${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang++" ]]; then
-                    cc="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang"
-                    cxx="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross/bin"
-                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross/lib" \
-                        ${CROSS_COMPILER_DIR}/osxcross/bin/x86_64-apple-darwin*-ld || return 2
+                if command -v o64-clang >/dev/null 2>&1 && command -v o64-clang++ >/dev/null 2>&1; then
+                    cc="o64-clang"
+                    cxx="o64-clang++"
+                elif [[ -x "${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++" ]]; then
+                    cc="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang"
+                    cxx="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin"
+                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-amd64/lib" \
+                        ${CROSS_COMPILER_DIR}/osxcross-amd64/bin/x86_64-apple-darwin*-ld || return 2
                 else
-                    local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "18.04")
+                    local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
                     if [[ "$ubuntu_version" != *"."* ]]; then
-                        ubuntu_version="18.04"
+                        ubuntu_version="20.04"
                     fi
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.1.2/osxcross-15-5-linux-amd64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
-                        "${CROSS_COMPILER_DIR}/osxcross" || return 2
-                    cc="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang"
-                    cxx="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross/bin"
-                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross/lib" \
-                        ${CROSS_COMPILER_DIR}/osxcross/bin/x86_64-apple-darwin*-ld || return 2
+                    # need install clang to fix:
+                    # osxcross: warning: cannot find clang intrinsic headers; please report this issue to the OSXCross project
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.0/osxcross-14-5-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                        "${CROSS_COMPILER_DIR}/osxcross-amd64" || return 2
+                    cc="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang"
+                    cxx="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin"
+                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-amd64/lib" \
+                        ${CROSS_COMPILER_DIR}/osxcross-amd64/bin/x86_64-apple-darwin*-ld || return 2
+                fi
+            elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
+                echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
+                return 2
+            fi
+            CC="${cc}"
+            CXX="${cxx}"
+            ;;
+        "arm64")
+            local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+            local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+            local cc=${!cc_var}
+            local cxx=${!cxx_var}
+            if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
+                if command -v o64-clang >/dev/null 2>&1 && command -v o64-clang++ >/dev/null 2>&1; then
+                    cc="o64-clang"
+                    cxx="o64-clang++"
+                elif [[ -x "${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++" ]]; then
+                    cc="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang"
+                    cxx="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin"
+                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-arm64/lib" \
+                        ${CROSS_COMPILER_DIR}/osxcross-arm64/bin/x86_64-apple-darwin*-ld || return 2
+                else
+                    local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
+                    if [[ "$ubuntu_version" != *"."* ]]; then
+                        ubuntu_version="20.04"
+                    fi
+                    # need install clang to fix:
+                    # osxcross: warning: cannot find clang intrinsic headers; please report this issue to the OSXCross project
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.0/osxcross-14-5-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                        "${CROSS_COMPILER_DIR}/osxcross-arm64" || return 2
+                    cc="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang"
+                    cxx="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin"
+                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-arm64/lib" \
+                        ${CROSS_COMPILER_DIR}/osxcross-arm64/bin/x86_64-apple-darwin*-ld || return 2
                 fi
             elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
                 echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
@@ -688,27 +728,66 @@ function initOsxCGO() {
             local cc=${!cc_var}
             local cxx=${!cxx_var}
             if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
-                if command -v oa64-clang >/dev/null 2>&1 && command -v oa64-clang++ >/dev/null 2>&1; then
-                    cc="oa64-clang"
-                    cxx="oa64-clang++"
-                elif [[ -x "${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang++" ]]; then
-                    cc="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang"
-                    cxx="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross/bin"
-                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross/lib" \
-                        ${CROSS_COMPILER_DIR}/osxcross/bin/x86_64-apple-darwin*-ld || return 2
+                if command -v o64-clang >/dev/null 2>&1 && command -v o64-clang++ >/dev/null 2>&1; then
+                    cc="o64-clang"
+                    cxx="o64-clang++"
+                elif [[ -x "${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++" ]]; then
+                    cc="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang"
+                    cxx="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin"
+                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-amd64/lib" \
+                        ${CROSS_COMPILER_DIR}/osxcross-amd64/bin/x86_64-apple-darwin*-ld || return 2
                 else
-                    local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "18.04")
+                    local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
                     if [[ "$ubuntu_version" != *"."* ]]; then
-                        ubuntu_version="18.04"
+                        ubuntu_version="20.04"
                     fi
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.1.2/osxcross-15-5-linux-amd64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
-                        "${CROSS_COMPILER_DIR}/osxcross" || return 2
-                    cc="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang"
-                    cxx="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross/bin"
-                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross/lib" \
-                        ${CROSS_COMPILER_DIR}/osxcross/bin/x86_64-apple-darwin*-ld || return 2
+                    # need install clang to fix:
+                    # osxcross: warning: cannot find clang intrinsic headers; please report this issue to the OSXCross project
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.0/osxcross-14-5-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                        "${CROSS_COMPILER_DIR}/osxcross-amd64" || return 2
+                    cc="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang"
+                    cxx="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin"
+                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-amd64/lib" \
+                        ${CROSS_COMPILER_DIR}/osxcross-amd64/bin/x86_64-apple-darwin*-ld || return 2
+                fi
+            elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
+                echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
+                return 2
+            fi
+            CC="${cc}"
+            CXX="${cxx}"
+            ;;
+        "arm64")
+            local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+            local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+            local cc=${!cc_var}
+            local cxx=${!cxx_var}
+            if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
+                if command -v o64-clang >/dev/null 2>&1 && command -v o64-clang++ >/dev/null 2>&1; then
+                    cc="o64-clang"
+                    cxx="o64-clang++"
+                elif [[ -x "${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++" ]]; then
+                    cc="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang"
+                    cxx="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin"
+                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-arm64/lib" \
+                        ${CROSS_COMPILER_DIR}/osxcross-arm64/bin/x86_64-apple-darwin*-ld || return 2
+                else
+                    local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
+                    if [[ "$ubuntu_version" != *"."* ]]; then
+                        ubuntu_version="20.04"
+                    fi
+                    # need install clang to fix:
+                    # osxcross: warning: cannot find clang intrinsic headers; please report this issue to the OSXCross project
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.0/osxcross-14-5-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                        "${CROSS_COMPILER_DIR}/osxcross-arm64" || return 2
+                    cc="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang"
+                    cxx="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin"
+                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-arm64/lib" \
+                        ${CROSS_COMPILER_DIR}/osxcross-arm64/bin/x86_64-apple-darwin*-ld || return 2
                 fi
             elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
                 echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
@@ -1187,7 +1266,7 @@ function buildTargetWithMicro() {
     local start_time=$(date +%s)
     env "${build_env[@]}" go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags "${TAGS}" -ldflags "${full_ldflags}" -o "${target_file}" "${SOURCE_DIR}"
     local end_time=$(date +%s)
-    echo -e "${COLOR_LIGHT_GREEN}Build successful: ${goos}/${goarch}${micro:+ ${micro}}  (took $((end_time - start_time))s)${COLOR_RESET}"
+    echo -e "${COLOR_LIGHT_GREEN}Build successful: ${goos}/${goarch}${micro:+ ${micro}} (took $((end_time - start_time))s, size: $(du -sh "${target_file}" | cut -f1))${COLOR_RESET}"
 }
 
 # Expands target patterns (e.g., "linux/*") to a list of supported targets.
@@ -1303,6 +1382,19 @@ while [[ $# -gt 0 ]]; do
         ;;
     -t=* | --targets=*)
         PLATFORMS="${1#*=}"
+        ;;
+    --cgo-enabled)
+        CGO_ENABLED="1"
+        ;;
+    --cgo-enabled=*)
+        value="${1#*=}"
+        if [[ "${value}" == "true" ]]; then
+            CGO_ENABLED="1"
+        elif [[ "${value}" == "false" ]]; then
+            CGO_ENABLED="0"
+        else
+            CGO_ENABLED="${value}"
+        fi
         ;;
     --result-dir=*)
         RESULT_DIR="${1#*=}"

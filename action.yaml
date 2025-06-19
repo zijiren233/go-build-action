@@ -113,28 +113,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: get_targets
-      if: ${{ inputs.show-all-targets != 'false' }}
-      shell: bash
-      working-directory: ${{ github.workspace }}
-      run: |
-        export SOURCE_DIR="${{ inputs.source-dir }}"
-        export BUILD_CONFIG="${{ inputs.build-config }}"
-        export CGO_ENABLED="${{ inputs.cgo-enabled == 'true' && '1' || '0' }}"
-        targets=${{ inputs.show-all-targets != 'true' && inputs.show-all-targets || '' }}
-        targets_output=$("${{ github.action_path }}/build.sh" --show-all-targets${targets:+"='${targets}'"})
-        declare -a arr=()
-        OIFS="$IFS"
-        IFS=$'\n,'
-        for line in $targets_output; do
-          echo "$line"
-          arr+=("$line")
-        done
-        IFS="$OIFS"
-        printf -v json '"%s",' "${arr[@]}"
-        json="[${json%,}]"
-        echo "targets=$json" >> $GITHUB_OUTPUT
-
     - id: build
       if: ${{ inputs.show-all-targets == 'false' }}
       shell: bash
