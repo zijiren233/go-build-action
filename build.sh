@@ -627,7 +627,7 @@ function initIosCGO() {
                     if [[ "$ubuntu_version" != *"."* ]]; then
                         ubuntu_version="18.04"
                     fi
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.1.1/osxcross-14-5-linux-amd64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.1.2/osxcross-15-5-linux-amd64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
                         "${CROSS_COMPILER_DIR}/osxcross" || return 2
                     cc="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang"
                     cxx="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang++"
@@ -702,7 +702,7 @@ function initOsxCGO() {
                     if [[ "$ubuntu_version" != *"."* ]]; then
                         ubuntu_version="18.04"
                     fi
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.1.1/osxcross-14-5-linux-amd64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.1.2/osxcross-15-5-linux-amd64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
                         "${CROSS_COMPILER_DIR}/osxcross" || return 2
                     cc="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang"
                     cxx="${CROSS_COMPILER_DIR}/osxcross/bin/oa64-clang++"
