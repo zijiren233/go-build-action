@@ -97,6 +97,12 @@ function printHelp() {
     echo -e "  ${COLOR_LIGHT_BLUE}-h, --help${COLOR_RESET}                        - Display this help message"
     echo -e "  ${COLOR_LIGHT_BLUE}--ldflags='<flags>'${COLOR_RESET}               - Set linker flags (default: \"${DEFAULT_LDFLAGS}\")"
     echo -e "  ${COLOR_LIGHT_BLUE}--add-go-build-args='<args>'${COLOR_RESET}      - Pass additional arguments to the 'go build' command"
+    echo -e "  ${COLOR_LIGHT_BLUE}-race${COLOR_RESET}                             - Enable race detection"
+    echo -e "  ${COLOR_LIGHT_BLUE}-a${COLOR_RESET}                                - Force rebuilding of packages that are already up-to-date"
+    echo -e "  ${COLOR_LIGHT_BLUE}-n${COLOR_RESET}                                - Print the commands but do not run them"
+    echo -e "  ${COLOR_LIGHT_BLUE}-x${COLOR_RESET}                                - Print the commands"
+    echo -e "  ${COLOR_LIGHT_BLUE}-v${COLOR_RESET}                                - Print the names of packages as they are compiled"
+    echo -e "  ${COLOR_LIGHT_BLUE}-work${COLOR_RESET}                             - Print the name of the temporary work directory and do not delete it when exiting"
     echo -e "  ${COLOR_LIGHT_BLUE}--ndk-version=<version>${COLOR_RESET}           - Specify the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
     echo -e "  ${COLOR_LIGHT_BLUE}-t=<targets>, --targets=<targets>${COLOR_RESET} - Specify target target(s) (default: host target, supports: all, linux, linux/arm*, ...)"
     echo -e "  ${COLOR_LIGHT_BLUE}--result-dir=<dir>${COLOR_RESET}                - Specify the build result directory (default: ${DEFAULT_RESULT_DIR})"
@@ -157,18 +163,11 @@ function fixArgs() {
     echo -e "${COLOR_LIGHT_BLUE}Binary name: ${COLOR_LIGHT_GREEN}${BIN_NAME}${COLOR_RESET}"
 
     setDefault "CGO_ENABLED" "${DEFAULT_CGO_ENABLED}"
-
-    setDefault "BIN_NAME_NO_SUFFIX" ""
-
     setDefault "CROSS_COMPILER_DIR" "$DEFAULT_CROSS_COMPILER_DIR"
     setDefault "PLATFORMS" "${GOHOSTPLATFORM}"
     setDefault "BUILDMODE" "${DEFAULT_BUILDMODE}"
-    setDefault "ENABLE_MICRO" ""
-    setDefault "GH_PROXY" ""
-    setDefault "TAGS" ""
     setDefault "LDFLAGS" "${DEFAULT_LDFLAGS}"
     setDefault "EXT_LDFLAGS" "${DEFAULT_EXT_LDFLAGS}"
-    setDefault "BUILD_ARGS" ""
     setDefault "CGO_DEPS_VERSION" "${DEFAULT_CGO_DEPS_VERSION}"
     setDefault "CGO_FLAGS" "${DEFAULT_CGO_FLAGS}"
     setDefault "CGO_LDFLAGS" "${DEFAULT_CGO_LDFLAGS}"
@@ -266,8 +265,6 @@ function clearAllowedTargets() {
 # go tool dist list
 function initTargets() {
     addAllowedTargets "$GODISTLIST"
-
-    # addAllowedTargets "$(echo "$GODISTLIST" | grep ios | sed 's/$/-sim/')"
 }
 
 # Checks if a target is allowed.
@@ -570,26 +567,34 @@ function initIosCGO() {
     case "${GOHOSTOS}" in
     "darwin")
         case "${goarch}" in
-        "amd64" | "amd64-sim"*)
-            local sdk_path
-            sdk_path=$(xcrun -sdk iphonesimulator --show-sdk-path)
-            [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS simulator SDK path.${COLOR_RESET}" && return 1
-            _CC="clang -arch x86_64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
-            _CXX="clang++ -arch x86_64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
-            ;;
-        "arm64-sim"*)
-            local sdk_path
-            sdk_path=$(xcrun -sdk iphonesimulator --show-sdk-path)
-            [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS simulator SDK path.${COLOR_RESET}" && return 1
-            _CC="clang -arch arm64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
-            _CXX="clang++ -arch arm64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
+        "amd64")
+            if [[ "${APPLE_SIMULATOR}" == "true" ]]; then
+                local sdk_path
+                sdk_path=$(xcrun -sdk iphonesimulator --show-sdk-path)
+                [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS simulator SDK path.${COLOR_RESET}" && return 1
+                _CC="clang -arch x86_64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
+                _CXX="clang++ -arch x86_64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
+            else
+                local sdk_path
+                sdk_path=$(xcrun -sdk iphoneos --show-sdk-path)
+                [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS SDK path.${COLOR_RESET}" && return 1
+                _CC="clang -arch x86_64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
+                _CXX="clang++ -arch x86_64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
+            fi
             ;;
         "arm64")
             local sdk_path
-            sdk_path=$(xcrun -sdk iphoneos --show-sdk-path)
-            [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS SDK path.${COLOR_RESET}" && return 1
-            _CC="clang -arch arm64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
-            _CXX="clang++ -arch arm64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
+            if [[ "${APPLE_SIMULATOR}" == "true" ]]; then
+                sdk_path=$(xcrun -sdk iphonesimulator --show-sdk-path)
+                [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS simulator SDK path.${COLOR_RESET}" && return 1
+                _CC="clang -arch arm64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
+                _CXX="clang++ -arch arm64 -miphonesimulator-version-min=4.2 -isysroot ${sdk_path}"
+            else
+                sdk_path=$(xcrun -sdk iphoneos --show-sdk-path)
+                [ $? -ne 0 ] && echo -e "${COLOR_LIGHT_RED}Failed to get iOS SDK path.${COLOR_RESET}" && return 1
+                _CC="clang -arch arm64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
+                _CXX="clang++ -arch arm64 -miphoneos-version-min=4.2 -isysroot ${sdk_path}"
+            fi
             ;;
         *)
             echo -e "${COLOR_LIGHT_YELLOW}Unknown ios architecture: ${goarch}${COLOR_RESET}"
@@ -598,81 +603,152 @@ function initIosCGO() {
         esac
         ;;
     "linux")
-        # FIXME: use ios sdk
+        if [[ "${goarch}" != "arm64" ]]; then
+            echo -e "${COLOR_LIGHT_YELLOW}Cross compiler not supported for ios/${goarch}.${COLOR_RESET}"
+            return 2
+        fi
         case "${GOHOSTARCH}" in
         "amd64")
-            local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
-            local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
-            local cc=${!cc_var}
-            local cxx=${!cxx_var}
-            if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
-                if command -v o64-clang >/dev/null 2>&1 && command -v o64-clang++ >/dev/null 2>&1; then
-                    cc="o64-clang"
-                    cxx="o64-clang++"
-                elif [[ -x "${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++" ]]; then
-                    cc="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang"
-                    cxx="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin"
-                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-amd64/lib" \
-                        ${CROSS_COMPILER_DIR}/osxcross-amd64/bin/x86_64-apple-darwin*-ld || return 2
-                else
-                    local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
-                    if [[ "$ubuntu_version" != *"."* ]]; then
-                        ubuntu_version="20.04"
+            if [[ "${APPLE_SIMULATOR}" == "true" ]]; then
+                local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+                local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+                local cc=${!cc_var}
+                local cxx=${!cxx_var}
+                if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
+                    if command -v arm64-apple-darwin11-clang >/dev/null 2>&1 && command -v arm64-apple-darwin11-clang++ >/dev/null 2>&1; then
+                        cc="arm64-apple-darwin11-clang"
+                        cxx="arm64-apple-darwin11-clang++"
+                    elif [[ -x "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang++" ]]; then
+                        cc="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang"
+                        cxx="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang++"
+                        EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin"
+                        patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/lib" \
+                            ${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin*-ld || return 2
+                    else
+                        local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
+                        if [[ "$ubuntu_version" != *"."* ]]; then
+                            ubuntu_version="20.04"
+                        fi
+                        downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.4/ioscross-iPhoneSimulator18-5-arm64-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                            "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64" || return 2
+                        cc="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang"
+                        cxx="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang++"
+                        EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin"
+                        patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/lib" \
+                            ${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin*-ld || return 2
                     fi
-                    # need install clang to fix:
-                    # osxcross: warning: cannot find clang intrinsic headers; please report this issue to the OSXCross project
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.0/osxcross-14-5-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
-                        "${CROSS_COMPILER_DIR}/osxcross-amd64" || return 2
-                    cc="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang"
-                    cxx="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin"
-                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-amd64/lib" \
-                        ${CROSS_COMPILER_DIR}/osxcross-amd64/bin/x86_64-apple-darwin*-ld || return 2
+                elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
+                    echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
+                    return 2
                 fi
-            elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
-                echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
-                return 2
+                _CC="${cc}"
+                _CXX="${cxx}"
+            else
+                local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+                local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+                local cc=${!cc_var}
+                local cxx=${!cxx_var}
+                if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
+                    if command -v arm64-apple-darwin11-clang >/dev/null 2>&1 && command -v arm64-apple-darwin11-clang++ >/dev/null 2>&1; then
+                        cc="arm64-apple-darwin11-clang"
+                        cxx="arm64-apple-darwin11-clang++"
+                    elif [[ -x "${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang++" ]]; then
+                        cc="${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang"
+                        cxx="${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang++"
+                        EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-amd64/bin"
+                        patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-amd64/lib" \
+                            ${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin*-ld || return 2
+                    else
+                        local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
+                        if [[ "$ubuntu_version" != *"."* ]]; then
+                            ubuntu_version="20.04"
+                        fi
+                        downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.4/ioscross-iPhoneOS18-5-arm64-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                            "${CROSS_COMPILER_DIR}/ioscross-amd64" || return 2
+                        cc="${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang"
+                        cxx="${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang++"
+                        EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-amd64/bin"
+                        patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-amd64/lib" \
+                            ${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin*-ld || return 2
+                    fi
+                elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
+                    echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
+                    return 2
+                fi
+                _CC="${cc}"
+                _CXX="${cxx}"
             fi
-            _CC="${cc}"
-            _CXX="${cxx}"
             ;;
         "arm64")
-            local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
-            local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
-            local cc=${!cc_var}
-            local cxx=${!cxx_var}
-            if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
-                if command -v o64-clang >/dev/null 2>&1 && command -v o64-clang++ >/dev/null 2>&1; then
-                    cc="o64-clang"
-                    cxx="o64-clang++"
-                elif [[ -x "${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++" ]]; then
-                    cc="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang"
-                    cxx="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin"
-                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-arm64/lib" \
-                        ${CROSS_COMPILER_DIR}/osxcross-arm64/bin/x86_64-apple-darwin*-ld || return 2
-                else
-                    local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
-                    if [[ "$ubuntu_version" != *"."* ]]; then
-                        ubuntu_version="20.04"
+            if [[ "${APPLE_SIMULATOR}" == "true" ]]; then
+                local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+                local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+                local cc=${!cc_var}
+                local cxx=${!cxx_var}
+                if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
+                    if command -v arm64-apple-darwin11-clang >/dev/null 2>&1 && command -v arm64-apple-darwin11-clang++ >/dev/null 2>&1; then
+                        cc="arm64-apple-darwin11-clang"
+                        cxx="arm64-apple-darwin11-clang++"
+                    elif [[ -x "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang++" ]]; then
+                        cc="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang"
+                        cxx="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang++"
+                        EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin"
+                        patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/lib" \
+                            ${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin*-ld || return 2
+                    else
+                        local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
+                        if [[ "$ubuntu_version" != *"."* ]]; then
+                            ubuntu_version="20.04"
+                        fi
+                        downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.4/ioscross-iPhoneSimulator18-5-arm64-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                            "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64" || return 2
+                        cc="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang"
+                        cxx="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang++"
+                        EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin"
+                        patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/lib" \
+                            ${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin*-ld || return 2
                     fi
-                    # need install clang to fix:
-                    # osxcross: warning: cannot find clang intrinsic headers; please report this issue to the OSXCross project
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.0/osxcross-14-5-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
-                        "${CROSS_COMPILER_DIR}/osxcross-arm64" || return 2
-                    cc="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang"
-                    cxx="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin"
-                    patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-arm64/lib" \
-                        ${CROSS_COMPILER_DIR}/osxcross-arm64/bin/x86_64-apple-darwin*-ld || return 2
+                elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
+                    echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
+                    return 2
                 fi
-            elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
-                echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
-                return 2
+                _CC="${cc}"
+                _CXX="${cxx}"
+            else
+                local cc_var=$(echo "CC_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+                local cxx_var=$(echo "CXX_OSX_${goarch}" | awk '{print tolower($0)}' | tr '-' '_')
+                local cc=${!cc_var}
+                local cxx=${!cxx_var}
+                if [[ -z "${cc}" ]] && [[ -z "${cxx}" ]]; then
+                    if command -v arm64-apple-darwin11-clang >/dev/null 2>&1 && command -v arm64-apple-darwin11-clang++ >/dev/null 2>&1; then
+                        cc="arm64-apple-darwin11-clang"
+                        cxx="arm64-apple-darwin11-clang++"
+                    elif [[ -x "${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang++" ]]; then
+                        cc="${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang"
+                        cxx="${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang++"
+                        EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-arm64/bin"
+                        patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-arm64/lib" \
+                            ${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin*-ld || return 2
+                    else
+                        local ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "20.04")
+                        if [[ "$ubuntu_version" != *"."* ]]; then
+                            ubuntu_version="20.04"
+                        fi
+                        downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.4/ioscross-iPhoneOS18-5-arm64-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                            "${CROSS_COMPILER_DIR}/ioscross-arm64" || return 2
+                        cc="${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang"
+                        cxx="${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang++"
+                        EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-arm64/bin"
+                        patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-arm64/lib" \
+                            ${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin*-ld || return 2
+                    fi
+                elif [[ -z "${cc}" ]] || [[ -z "${cxx}" ]]; then
+                    echo -e "${COLOR_LIGHT_RED}Both ${cc_var} and ${cxx_var} must be set.${COLOR_RESET}"
+                    return 2
+                fi
+                _CC="${cc}"
+                _CXX="${cxx}"
             fi
-            _CC="${cc}"
-            _CXX="${cxx}"
             ;;
         *)
             echo -e "${COLOR_LIGHT_YELLOW}Cross compiler not supported for ${GOHOSTOS}/${GOHOSTARCH}.${COLOR_RESET}"
@@ -1164,8 +1240,7 @@ function cleanBuildCache() {
 #   $4: CGO enabled (0 or 1)
 function buildTargetWithMicro() {
     local goos="$1"
-    local _goarch="$2"
-    local goarch="${_goarch%%-*}"
+    local goarch="$2"
     local micro="$3"
 
     local build_env=(
@@ -1175,7 +1250,7 @@ function buildTargetWithMicro() {
     local buildmode=$BUILDMODE
     local ext=$(extension "${goos}" "${buildmode}")
     local target_file="${RESULT_DIR}/${BIN_NAME}"
-    [ -z "$BIN_NAME_NO_SUFFIX" ] && target_file="${target_file}-${goos}-${_goarch}${micro:+"-${micro//[.,]/-}"}" || true
+    [ -z "$BIN_NAME_NO_SUFFIX" ] && target_file="${target_file}-${goos}-${goarch}${micro:+"-${micro//[.,]/-}"}" || true
     target_file="${target_file}${ext}"
 
     # Set micro architecture specific environment variables.
@@ -1218,7 +1293,7 @@ function buildTargetWithMicro() {
     echo -e "${COLOR_LIGHT_MAGENTA}Building ${goos}/${goarch}${micro:+/${micro}}...${COLOR_RESET}"
 
     if isCGOEnabled; then
-        if initCGODeps "${goos}" "${_goarch}" "${micro}"; then
+        if initCGODeps "${goos}" "${goarch}" "${micro}"; then
             code=0
         else
             code=$?
@@ -1359,6 +1434,9 @@ while [[ $# -gt 0 ]]; do
     --add-go-build-args=*)
         addBuildArgs "${1#*=}"
         ;;
+    -race | -a | -v | -x | -n | -work)
+        addBuildArgs "-${1#-}"
+        ;;
     --enable-micro)
         ENABLE_MICRO="true"
         ;;
@@ -1383,6 +1461,9 @@ while [[ $# -gt 0 ]]; do
         else
             CGO_ENABLED="${value}"
         fi
+        ;;
+    --apple-simulator)
+        APPLE_SIMULATOR="true"
         ;;
     --result-dir=*)
         RESULT_DIR="${1#*=}"

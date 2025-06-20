@@ -80,22 +80,22 @@ inputs:
     description: "Show all supported targets"
     required: false
     default: "false"
-  flag-race:
+  race:
     description: "enable data race detection. Supported only on linux/amd64, freebsd/amd64, darwin/amd64, darwin/arm64, windows/amd64, linux/ppc64le and linux/arm64 (only for 48-bit VMA)."
     required: false
-  flag-a:
+  a:
     description: "force rebuilding of packages that are already up-to-date."
     required: false
-  flag-n:
+  n:
     description: "print the commands but do not run them."
     required: false
-  flag-x:
+  x:
     description: "print the commands."
     required: false
-  flag-v:
+  v:
     description: "print the names of packages as they are compiled."
     required: false
-  flag-work:
+  work:
     description: "print the name of the temporary work directory and do not delete it when exiting."
     required: false
   config-args:
@@ -137,10 +137,10 @@ runs:
           ${{ inputs.cross-compiler-dir != '' && format('--cross-compiler-dir=''{0}''', inputs.cross-compiler-dir) || '' }} \
           ${{ inputs.ndk-version != '' && format('--ndk-version=''{0}''', inputs.ndk-version) || '' }} \
           ${{ inputs.enable-micro == 'true' && '--enable-micro' || '' }} \
-          ${{ inputs.flag-race == 'true' && '--add-go-build-args=-race' || '' }} \
-          ${{ inputs.flag-a == 'true' && '--add-go-build-args=-a' || '' }} \
-          ${{ inputs.flag-n == 'true' && '--add-go-build-args=-n' || '' }} \
-          ${{ inputs.flag-x == 'true' && '--add-go-build-args=-x' || '' }} \
-          ${{ inputs.flag-v == 'true' && '--add-go-build-args=-v' || '' }} \
-          ${{ inputs.flag-work == 'true' && '--add-go-build-args=-work' || '' }} \
+          ${{ inputs.race == 'true' && '-race' || '' }} \
+          ${{ inputs.a == 'true' && '-a' || '' }} \
+          ${{ inputs.n == 'true' && '-n' || '' }} \
+          ${{ inputs.x == 'true' && '-x' || '' }} \
+          ${{ inputs.v == 'true' && '-v' || '' }} \
+          ${{ inputs.work == 'true' && '-work' || '' }} \
           ${{ inputs.config-args != '' && inputs.config-args || '' }}
