@@ -340,8 +340,8 @@ function initCGODeps() {
 
     local cc_var="CC_FOR_${goos}_${goarch}"
     local cxx_var="CXX_FOR_${goos}_${goarch}"
-    local _CC=${CC_FOR_TARGET}
-    local _CXX=${CXX_FOR_TARGET}
+    _CC=${CC_FOR_TARGET}
+    _CXX=${CXX_FOR_TARGET}
 
     if [[ -n "${_CC}" ]] && [[ -n "${_CXX}" ]]; then
         _CC=${CC_FOR_TARGET}
