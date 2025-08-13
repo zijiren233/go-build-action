@@ -1116,6 +1116,11 @@ function buildTarget() {
         buildTargetWithMicro "${goos}" "${goarch}" "rva20u64"
         echo
         buildTargetWithMicro "${goos}" "${goarch}" "rva22u64"
+        if versionLessThan "${GOVERSION}" "1.25"; then
+            return 0
+        fi
+        echo
+        buildTargetWithMicro "${goos}" "${goarch}" "rva23u64"
         ;;
     esac
 }
