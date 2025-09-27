@@ -620,10 +620,6 @@ function initIosCGO() {
         esac
         ;;
     "linux")
-        if [[ "${goarch}" != "arm64" ]]; then
-            echo -e "${COLOR_LIGHT_YELLOW}Cross compiler not supported for ios/${goarch}.${COLOR_RESET}"
-            return 2
-        fi
         case "${GOHOSTARCH}" in
         "amd64")
             if [[ "${APPLE_SIMULATOR}" == "true" ]]; then
@@ -650,6 +646,10 @@ function initIosCGO() {
                         ${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin*-ld || return 2
                 fi
             else
+                if [[ "${goarch}" != "arm64" ]]; then
+                    echo -e "${COLOR_LIGHT_YELLOW}Cross compiler not supported for ios/${goarch}.${COLOR_RESET}"
+                    return 2
+                fi
                 if command -v arm64-apple-darwin11-clang >/dev/null 2>&1 && command -v arm64-apple-darwin11-clang++ >/dev/null 2>&1; then
                     _CC="arm64-apple-darwin11-clang"
                     _CXX="arm64-apple-darwin11-clang++"
@@ -699,6 +699,10 @@ function initIosCGO() {
                         ${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin*-ld || return 2
                 fi
             else
+                if [[ "${goarch}" != "arm64" ]]; then
+                    echo -e "${COLOR_LIGHT_YELLOW}Cross compiler not supported for ios/${goarch}.${COLOR_RESET}"
+                    return 2
+                fi
                 if command -v arm64-apple-darwin11-clang >/dev/null 2>&1 && command -v arm64-apple-darwin11-clang++ >/dev/null 2>&1; then
                     _CC="arm64-apple-darwin11-clang"
                     _CXX="arm64-apple-darwin11-clang++"
