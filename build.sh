@@ -633,7 +633,7 @@ function initIosCGO() {
                 elif [[ -x "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang++" ]]; then
                     _CC="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang"
                     _CXX="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin:${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/clang/bin"
                     patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/lib" \
                         ${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin*-ld || return 2
                 else
@@ -641,11 +641,11 @@ function initIosCGO() {
                     if [[ "$ubuntu_version" != *"."* ]]; then
                         ubuntu_version="20.04"
                     fi
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.4/ioscross-iPhoneSimulator18-5-arm64-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.6/ioscross-iPhoneSimulator18-5-arm64-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
                         "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64" || return 2
                     _CC="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang"
                     _CXX="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin11-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin:${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/clang/bin"
                     patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/lib" \
                         ${CROSS_COMPILER_DIR}/ioscross-simulator-amd64/bin/arm64-apple-darwin*-ld || return 2
                 fi
@@ -656,7 +656,7 @@ function initIosCGO() {
                 elif [[ -x "${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang++" ]]; then
                     _CC="${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang"
                     _CXX="${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-amd64/bin"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-amd64/bin:${CROSS_COMPILER_DIR}/ioscross-amd64/clang/bin"
                     patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-amd64/lib" \
                         ${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin*-ld || return 2
                 else
@@ -664,11 +664,11 @@ function initIosCGO() {
                     if [[ "$ubuntu_version" != *"."* ]]; then
                         ubuntu_version="20.04"
                     fi
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.4/ioscross-iPhoneOS18-5-arm64-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.6/ioscross-iPhoneOS18-5-arm64-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
                         "${CROSS_COMPILER_DIR}/ioscross-amd64" || return 2
                     _CC="${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang"
                     _CXX="${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin11-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-amd64/bin"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-amd64/bin:${CROSS_COMPILER_DIR}/ioscross-amd64/clang/bin"
                     patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-amd64/lib" \
                         ${CROSS_COMPILER_DIR}/ioscross-amd64/bin/arm64-apple-darwin*-ld || return 2
                 fi
@@ -682,7 +682,7 @@ function initIosCGO() {
                 elif [[ -x "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang++" ]]; then
                     _CC="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang"
                     _CXX="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin:${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/clang/bin"
                     patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/lib" \
                         ${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin*-ld || return 2
                 else
@@ -690,11 +690,11 @@ function initIosCGO() {
                     if [[ "$ubuntu_version" != *"."* ]]; then
                         ubuntu_version="20.04"
                     fi
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.4/ioscross-iPhoneSimulator18-5-arm64-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.6/ioscross-iPhoneSimulator18-5-arm64-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
                         "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64" || return 2
                     _CC="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang"
                     _CXX="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin11-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin:${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/clang/bin"
                     patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/lib" \
                         ${CROSS_COMPILER_DIR}/ioscross-simulator-arm64/bin/arm64-apple-darwin*-ld || return 2
                 fi
@@ -705,7 +705,7 @@ function initIosCGO() {
                 elif [[ -x "${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang++" ]]; then
                     _CC="${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang"
                     _CXX="${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-arm64/bin"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-arm64/bin:${CROSS_COMPILER_DIR}/ioscross-arm64/clang/bin"
                     patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-arm64/lib" \
                         ${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin*-ld || return 2
                 else
@@ -713,11 +713,11 @@ function initIosCGO() {
                     if [[ "$ubuntu_version" != *"."* ]]; then
                         ubuntu_version="20.04"
                     fi
-                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.4/ioscross-iPhoneOS18-5-arm64-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                    downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/cctools-port/releases/download/v0.1.6/ioscross-iPhoneOS18-5-arm64-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
                         "${CROSS_COMPILER_DIR}/ioscross-arm64" || return 2
                     _CC="${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang"
                     _CXX="${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin11-clang++"
-                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-arm64/bin"
+                    EXTRA_PATH="${CROSS_COMPILER_DIR}/ioscross-arm64/bin:${CROSS_COMPILER_DIR}/ioscross-arm64/clang/bin"
                     patchelf --set-rpath "${CROSS_COMPILER_DIR}/ioscross-arm64/lib" \
                         ${CROSS_COMPILER_DIR}/ioscross-arm64/bin/arm64-apple-darwin*-ld || return 2
                 fi
