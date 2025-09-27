@@ -762,6 +762,8 @@ function initOsxCGO() {
         esac
         ;;
     "linux")
+		export OSXCROSS_MP_INC=1
+        export MACOSX_DEPLOYMENT_TARGET=10.7
         case "${GOHOSTARCH}" in
         "amd64")
             if command -v o64-clang >/dev/null 2>&1 && command -v o64-clang++ >/dev/null 2>&1; then
@@ -770,7 +772,7 @@ function initOsxCGO() {
             elif [[ -x "${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++" ]]; then
                 _CC="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang"
                 _CXX="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++"
-                EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin"
+                EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin:${CROSS_COMPILER_DIR}/clang/bin"
                 patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-amd64/lib" \
                     ${CROSS_COMPILER_DIR}/osxcross-amd64/bin/x86_64-apple-darwin*-ld || return 2
             else
@@ -780,11 +782,11 @@ function initOsxCGO() {
                 fi
                 # need install clang to fix:
                 # osxcross: warning: cannot find clang intrinsic headers; please report this issue to the OSXCross project
-                downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.0/osxcross-14-5-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.2/osxcross-14-5-linux-x86_64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
                     "${CROSS_COMPILER_DIR}/osxcross-amd64" || return 2
                 _CC="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang"
                 _CXX="${CROSS_COMPILER_DIR}/osxcross-amd64/bin/o64-clang++"
-                EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin"
+                EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-amd64/bin:${CROSS_COMPILER_DIR}/clang/bin"
                 patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-amd64/lib" \
                     ${CROSS_COMPILER_DIR}/osxcross-amd64/bin/x86_64-apple-darwin*-ld || return 2
             fi
@@ -796,7 +798,7 @@ function initOsxCGO() {
             elif [[ -x "${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang" ]] && [[ -x "${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++" ]]; then
                 _CC="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang"
                 _CXX="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++"
-                EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin"
+                EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin:${CROSS_COMPILER_DIR}/clang/bin"
                 patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-arm64/lib" \
                     ${CROSS_COMPILER_DIR}/osxcross-arm64/bin/x86_64-apple-darwin*-ld || return 2
             else
@@ -806,11 +808,11 @@ function initOsxCGO() {
                 fi
                 # need install clang to fix:
                 # osxcross: warning: cannot find clang intrinsic headers; please report this issue to the OSXCross project
-                downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.0/osxcross-14-5-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
+                downloadAndUnzip "${GH_PROXY}https://github.com/zijiren233/osxcross/releases/download/v0.2.2/osxcross-14-5-linux-aarch64-gnu-ubuntu-${ubuntu_version}.tar.gz" \
                     "${CROSS_COMPILER_DIR}/osxcross-arm64" || return 2
                 _CC="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang"
                 _CXX="${CROSS_COMPILER_DIR}/osxcross-arm64/bin/o64-clang++"
-                EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin"
+                EXTRA_PATH="${CROSS_COMPILER_DIR}/osxcross-arm64/bin:${CROSS_COMPILER_DIR}/clang/bin"
                 patchelf --set-rpath "${CROSS_COMPILER_DIR}/osxcross-arm64/lib" \
                     ${CROSS_COMPILER_DIR}/osxcross-arm64/bin/x86_64-apple-darwin*-ld || return 2
             fi
