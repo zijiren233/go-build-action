@@ -118,7 +118,7 @@ runs:
         export SOURCE_DIR="${{ inputs.source-dir }}"
         export BUILD_CONFIG="${{ inputs.build-config }}"
         export CGO_ENABLED="${{ inputs.cgo-enabled == 'true' && '1' || '0' }}"
-        "${{ github.action_path }}/build.sh" \
+        "${{ github.action_path }}/cross.sh" \
           ${{ inputs.result-dir != '' && format('--result-dir=''{0}''', inputs.result-dir) || '' }} \
           ${{ inputs.buildmode != '' && format('--buildmode=''{0}''', inputs.buildmode) || '' }} \
           ${{ inputs.bin-name != '' && format('--bin-name=''{0}''', inputs.bin-name) || '' }} \

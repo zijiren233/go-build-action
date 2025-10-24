@@ -44,5 +44,5 @@ jobs:
 ```
 
 ```bash
-curl -sL https://raw.githubusercontent.com/zijiren233/go-build-action/refs/tags/v1/build.sh | bash -s -- --show-all-targets
+curl -sL https://raw.githubusercontent.com/zijiren233/go-build-action/refs/tags/v1/cross.sh | bash -s -- --show-all-targets
 ```
