@@ -110,37 +110,50 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: build
+    - name: Show all targets
+      if: ${{ inputs.show-all-targets == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.source-dir }}
+      run: |
+        "${{ github.action_path }}/cross.sh" --show-all-targets
+
+    - name: Build
+      id: build
       if: ${{ inputs.show-all-targets == 'false' }}
       shell: bash
-      working-directory: ${{ github.workspace }}
+      working-directory: ${{ inputs.source-dir }}
+      env:
+        BUILD_CONFIG: ${{ inputs.build-config }}
+        CGO_ENABLED: ${{ inputs.cgo-enabled }}
+        INPUT_RESULT_DIR: ${{ inputs.result-dir }}
+        INPUT_BUILDMODE: ${{ inputs.buildmode }}
+        INPUT_BIN_NAME: ${{ inputs.bin-name }}
+        INPUT_BIN_NAME_NO_SUFFIX: ${{ inputs.bin-name-no-suffix }}
+        INPUT_ADD_GO_BUILD_ARGS: ${{ inputs.add-go-build-args }}
+        INPUT_TARGETS: ${{ inputs.targets }}
+        INPUT_FORCE_CGO: ${{ inputs.force-cgo }}
+        INPUT_CC: ${{ inputs.cc }}
+        INPUT_CXX: ${{ inputs.cxx }}
+        INPUT_USE_DEFAULT_CC_CXX: ${{ inputs.use-default-cc-cxx }}
+        INPUT_CGO_FLAGS: ${{ inputs.cgo-flags }}
+        INPUT_CGO_LDFLAGS: ${{ inputs.cgo-ldflags }}
+        INPUT_LDFLAGS: ${{ inputs.ldflags }}
+        INPUT_EXT_LDFLAGS: ${{ inputs.ext-ldflags }}
+        INPUT_TAGS: ${{ inputs.tags }}
+        INPUT_GITHUB_PROXY_MIRROR: ${{ inputs.github-proxy-mirror }}
+        INPUT_CROSS_COMPILER_DIR: ${{ inputs.cross-compiler-dir }}
+        INPUT_NDK_VERSION: ${{ inputs.ndk-version }}
+        INPUT_GO_CLEAN_CACHE: ${{ inputs.go-clean-cache }}
+        INPUT_ENABLE_MICRO: ${{ inputs.enable-micro }}
+        INPUT_RACE: ${{ inputs.race }}
+        INPUT_A: ${{ inputs.a }}
+        INPUT_N: ${{ inputs.n }}
+        INPUT_X: ${{ inputs.x }}
+        INPUT_V: ${{ inputs.v }}
+        INPUT_WORK: ${{ inputs.work }}
+        INPUT_CONFIG_ARGS: ${{ inputs.config-args }}
+        ACTION_PATH: ${{ github.action_path }}
+        SOURCE_DIR: ${{ inputs.source-dir }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
       run: |
-        export SOURCE_DIR="${{ inputs.source-dir }}"
-        export BUILD_CONFIG="${{ inputs.build-config }}"
-        export CGO_ENABLED="${{ inputs.cgo-enabled == 'true' && '1' || '0' }}"
-        "${{ github.action_path }}/cross.sh" \
-          ${{ inputs.result-dir != '' && format('--result-dir=''{0}''', inputs.result-dir) || '' }} \
-          ${{ inputs.buildmode != '' && format('--buildmode=''{0}''', inputs.buildmode) || '' }} \
-          ${{ inputs.bin-name != '' && format('--bin-name=''{0}''', inputs.bin-name) || '' }} \
-          ${{ inputs.bin-name-no-suffix == 'true' && '--bin-name-no-suffix' || '' }} \
-          ${{ inputs.add-go-build-args != '' && format('--add-go-build-args=''{0}''', inputs.add-go-build-args) || '' }} \
-          ${{ inputs.targets != '' && format('--targets=''{0}''', inputs.targets) || '' }} \
-          ${{ inputs.use-default-cc-cxx == 'true' && '--use-default-cc-cxx' || '' }} \
-          ${{ inputs.cc != '' && format('--cc=''{0}''', inputs.cc) || '' }} \
-          ${{ inputs.cxx != '' && format('--cxx=''{0}''', inputs.cxx) || '' }} \
-          ${{ inputs.cgo-flags != '' && format('--cgo-flags=''{0}''', inputs.cgo-flags) || '' }} \
-          ${{ inputs.cgo-ldflags != '' && format('--cgo-ldflags=''{0}''', inputs.cgo-ldflags) || '' }} \
-          ${{ inputs.tags != '' && format('--tags=''{0}''', inputs.tags) || '' }} \
-          ${{ inputs.ldflags != '' && format('--ldflags=''{0}''', inputs.ldflags) || '' }} \
-          ${{ inputs.ext-ldflags != '' && format('--ext-ldflags=''{0}''', inputs.ext-ldflags) || '' }} \
-          ${{ inputs.github-proxy-mirror != '' && format('--github-proxy-mirror=''{0}''', inputs.github-proxy-mirror) || '' }} \
-          ${{ inputs.cross-compiler-dir != '' && format('--cross-compiler-dir=''{0}''', inputs.cross-compiler-dir) || '' }} \
-          ${{ inputs.ndk-version != '' && format('--ndk-version=''{0}''', inputs.ndk-version) || '' }} \
-          ${{ inputs.enable-micro == 'true' && '--enable-micro' || '' }} \
-          ${{ inputs.race == 'true' && '-race' || '' }} \
-          ${{ inputs.a == 'true' && '-a' || '' }} \
-          ${{ inputs.n == 'true' && '-n' || '' }} \
-          ${{ inputs.x == 'true' && '-x' || '' }} \
-          ${{ inputs.v == 'true' && '-v' || '' }} \
-          ${{ inputs.work == 'true' && '-work' || '' }} \
-          ${{ inputs.config-args != '' && inputs.config-args || '' }}
+        "$ACTION_PATH/action-wrapper.sh"
