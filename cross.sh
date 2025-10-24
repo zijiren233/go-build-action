@@ -128,11 +128,11 @@ is_next_arg_option() {
 # Prints help information about build configuration
 print_build_config_help() {
 	echo -e "${COLOR_LIGHT_ORANGE}You can customize the build configuration using the following functions (defined in ${DEFAULT_BUILD_CONFIG}):${COLOR_RESET}"
-	echo -e "  ${COLOR_LIGHT_GREEN}initDep${COLOR_RESET}          - Initialize dependencies"
-	echo -e "  ${COLOR_LIGHT_GREEN}initDepTargets${COLOR_RESET}   - Initialize dependency targets"
-	echo -e "  ${COLOR_LIGHT_GREEN}parseDepArgs${COLOR_RESET}     - Parse dependency arguments"
-	echo -e "  ${COLOR_LIGHT_GREEN}printDepEnvHelp${COLOR_RESET}  - Print dependency environment variable help"
-	echo -e "  ${COLOR_LIGHT_GREEN}printDepHelp${COLOR_RESET}     - Print dependency help information"
+	echo -e "  ${COLOR_LIGHT_GREEN}init_dep${COLOR_RESET}            - Initialize dependencies"
+	echo -e "  ${COLOR_LIGHT_GREEN}init_dep_targets${COLOR_RESET}    - Initialize dependency targets"
+	echo -e "  ${COLOR_LIGHT_GREEN}parse_dep_args${COLOR_RESET}      - Parse dependency arguments"
+	echo -e "  ${COLOR_LIGHT_GREEN}print_dep_env_help${COLOR_RESET}  - Print dependency environment variable help"
+	echo -e "  ${COLOR_LIGHT_GREEN}print_dep_help${COLOR_RESET}      - Print dependency help information"
 }
 
 # Prints help information about environment variables
@@ -156,10 +156,10 @@ print_env_help() {
 	echo -e "  ${COLOR_LIGHT_CYAN}SOURCE_DIR${COLOR_RESET}         - Set the source directory (default: ${DEFAULT_SOURCE_DIR})"
 	echo -e "  ${COLOR_LIGHT_CYAN}USE_GNU_LIBC${COLOR_RESET}       - Use GNU libc instead of musl for Linux targets"
 
-	if declare -f printDepEnvHelp >/dev/null; then
+	if declare -f print_dep_env_help >/dev/null; then
 		echo -e "${COLOR_LIGHT_GRAY}$(print_separator)${COLOR_RESET}"
 		echo -e "${COLOR_LIGHT_ORANGE}Dependency Environment Variables:${COLOR_RESET}"
-		printDepEnvHelp
+		print_dep_env_help
 	fi
 }
 
@@ -198,10 +198,10 @@ print_help() {
 	echo -e "  ${COLOR_LIGHT_BLUE}--show-all-targets${COLOR_RESET}                - Display all supported target targets"
 	echo -e "  ${COLOR_LIGHT_BLUE}--tags='<tags>'${COLOR_RESET}                   - Set build tags"
 
-	if declare -f printDepHelp >/dev/null; then
+	if declare -f print_dep_help >/dev/null; then
 		echo -e "${COLOR_LIGHT_MAGENTA}$(print_separator)${COLOR_RESET}"
 		echo -e "${COLOR_LIGHT_MAGENTA}Dependency Options:${COLOR_RESET}"
-		printDepHelp
+		print_dep_help
 	fi
 
 	echo -e "${COLOR_DARK_GRAY}$(print_separator)${COLOR_RESET}"
