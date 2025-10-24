@@ -66,4 +66,4 @@ fi
 [ -n "$INPUT_CONFIG_ARGS" ] && ARGS+=($INPUT_CONFIG_ARGS)
 
 # Execute command
-"$ACTION_PATH/cross.sh" "${ARGS[@]}"
+eval "$ACTION_PATH/cross.sh" ${ARGS[@]}
