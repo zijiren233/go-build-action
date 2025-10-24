@@ -214,7 +214,7 @@ print_help() {
 
 # Appends tags to the TAGS variable
 add_tags() {
-	TAGS="$(echo "$TAGS $@" | sed 's/ //g' | sed 's/"//g' | sed 's/\n//g')"
+	BUILD_TAGS="$(echo "$BUILD_TAGS $@" | sed 's/ //g' | sed 's/"//g' | sed 's/\n//g')"
 }
 
 # Appends linker flags to the LDFLAGS variable
@@ -1444,13 +1444,36 @@ build_target_with_micro() {
 
 	local full_ldflags="${LDFLAGS}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}"
 
+	# Build the go build command dynamically, checking environment variables
+	local go_build_cmd="go build -buildmode=$buildmode -trimpath"
+
+	# Add build args from ADD_GO_BUILD_ARGS variable
+	[[ -n "$ADD_GO_BUILD_ARGS" ]] && go_build_cmd="$go_build_cmd $ADD_GO_BUILD_ARGS"
+
+	# Add boolean flag build args
+	[[ "$GO_RACE" = "true" ]] && go_build_cmd="$go_build_cmd -race"
+	[[ "$GO_A" = "true" ]] && go_build_cmd="$go_build_cmd -a"
+	[[ "$GO_V" = "true" ]] && go_build_cmd="$go_build_cmd -v"
+	[[ "$GO_X" = "true" ]] && go_build_cmd="$go_build_cmd -x"
+	[[ "$GO_N" = "true" ]] && go_build_cmd="$go_build_cmd -n"
+	[[ "$GO_WORK" = "true" ]] && go_build_cmd="$go_build_cmd -work"
+
+	# Add tags if set
+	[[ -n "$BUILD_TAGS" ]] && go_build_cmd="$go_build_cmd -tags \"${BUILD_TAGS}\""
+
+	# Add ldflags
+	go_build_cmd="$go_build_cmd -ldflags \"${full_ldflags}\""
+
+	# Add output and source
+	go_build_cmd="$go_build_cmd -o \"${target_file}\" \"${SOURCE_DIR}\""
+
 	log_info "Run command:"
 	for var in "${build_env[@]}"; do
 		key=$(echo "${var}" | cut -d= -f1)
 		value=$(echo "${var}" | cut -d= -f2-)
 		echo -e "  ${COLOR_LIGHT_GREEN}export${COLOR_RESET} ${COLOR_WHITE}${key}='${value}'${COLOR_RESET}"
 	done
-	echo -e "  ${COLOR_LIGHT_CYAN}go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags \"${TAGS}\" -ldflags \"${full_ldflags}\" -o \"${target_file}\" \"${SOURCE_DIR}\"${COLOR_RESET}"
+	echo -e "  ${COLOR_LIGHT_CYAN}${go_build_cmd}${COLOR_RESET}"
 
 	local start_time=$(date +%s)
 
@@ -1460,7 +1483,7 @@ build_target_with_micro() {
 	build_env+=("CC_FOR_${goos}_${goarch}=")
 	build_env+=("CXX_FOR_${goos}_${goarch}=")
 
-	env "${build_env[@]}" go build -buildmode=$buildmode -trimpath ${BUILD_ARGS} -tags "${TAGS}" -ldflags "${full_ldflags}" -o "${target_file}" "${SOURCE_DIR}"
+	eval env '"${build_env[@]}"' "$go_build_cmd"
 	local end_time=$(date +%s)
 	log_success "Build successful: ${goos}/${goarch}${micro:+ ${micro}} (took $((end_time - start_time))s, size: $(du -sh "${target_file}" | cut -f1))"
 }
@@ -1532,6 +1555,12 @@ init_targets
 print_var
 load_build_config
 
+# Handle USE_DEFAULT_CC_CXX flag
+if [[ "$USE_DEFAULT_CC_CXX" = "true" ]]; then
+	CC="${DEFAULT_CC}"
+	CXX="${DEFAULT_CXX}"
+fi
+
 # -----------------------------------------------------------------------------
 # Argument Parsing
 # -----------------------------------------------------------------------------
@@ -1564,31 +1593,46 @@ while [[ $# -gt 0 ]]; do
 		BIN_NAME_NO_SUFFIX="true"
 		;;
 	--add-go-build-args=*)
-		add_build_args "${1#*=}"
+		ADD_GO_BUILD_ARGS="${ADD_GO_BUILD_ARGS:+$ADD_GO_BUILD_ARGS }${1#*=}"
 		;;
 	--add-go-build-args)
 		shift
-		add_build_args "$(parse_option_value "--add-go-build-args" "$@")"
+		ADD_GO_BUILD_ARGS="${ADD_GO_BUILD_ARGS:+$ADD_GO_BUILD_ARGS }$(parse_option_value "--add-go-build-args" "$@")"
 		;;
-	-race | -a | -v | -x | -n | -work)
-		add_build_args "-${1#-}"
+	-race)
+		GO_RACE="true"
+		;;
+	-a)
+		GO_A="true"
+		;;
+	-v)
+		GO_V="true"
+		;;
+	-x)
+		GO_X="true"
+		;;
+	-n)
+		GO_N="true"
+		;;
+	-work)
+		GO_WORK="true"
 		;;
 	--enable-micro)
 		ENABLE_MICRO="true"
 		;;
 	--ldflags=*)
-		add_ldflags "${1#*=}"
+		LDFLAGS="${LDFLAGS:+$LDFLAGS }${1#*=}"
 		;;
 	--ldflags)
 		shift
-		add_ldflags "$(parse_option_value "--ldflags" "$@")"
+		LDFLAGS="${LDFLAGS:+$LDFLAGS }$(parse_option_value "--ldflags" "$@")"
 		;;
 	--ext-ldflags=*)
-		add_ext_ldflags "${1#*=}"
+		EXT_LDFLAGS="${EXT_LDFLAGS:+$EXT_LDFLAGS }${1#*=}"
 		;;
 	--ext-ldflags)
 		shift
-		add_ext_ldflags "$(parse_option_value "--ext-ldflags" "$@")"
+		EXT_LDFLAGS="${EXT_LDFLAGS:+$EXT_LDFLAGS }$(parse_option_value "--ext-ldflags" "$@")"
 		;;
 	-t=* | --targets=*)
 		PLATFORMS="${1#*=}"
@@ -1621,11 +1665,11 @@ while [[ $# -gt 0 ]]; do
 		RESULT_DIR="$(parse_option_value "--result-dir" "$@")"
 		;;
 	--tags=*)
-		add_tags "${1#*=}"
+		BUILD_TAGS="$(echo "$BUILD_TAGS ${1#*=}" | sed 's/^ //g' | sed 's/ //g' | sed 's/"//g' | sed 's/\n//g')"
 		;;
 	--tags)
 		shift
-		add_tags "$(parse_option_value "--tags" "$@")"
+		BUILD_TAGS="$(echo "$BUILD_TAGS $(parse_option_value "--tags" "$@")" | sed 's/^ //g' | sed 's/ //g' | sed 's/"//g' | sed 's/\n//g')"
 		;;
 	--show-all-targets)
 		echo "${ALLOWED_PLATFORMS}"
