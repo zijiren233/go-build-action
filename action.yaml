@@ -33,6 +33,7 @@ inputs:
     required: false
   cgo-enabled:
     description: "Enable CGO"
+    default: "0"
     required: false
   force-cgo:
     description: "Force use of CGO"
