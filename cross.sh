@@ -254,7 +254,7 @@ fix_args() {
 
 # Checks if CGO is enabled
 is_cgo_enabled() {
-	[[ "${CGO_ENABLED}" == "1" ]]
+	[[ "${CGO_ENABLED}" == "1" ]] || [[ "${CGO_ENABLED}" == "true" ]] || [[ "${CGO_ENABLED}" == "t" ]]
 }
 
 # -----------------------------------------------------------------------------
@@ -1645,14 +1645,7 @@ while [[ $# -gt 0 ]]; do
 		CGO_ENABLED="1"
 		;;
 	--cgo-enabled=*)
-		value="${1#*=}"
-		if [[ "${value}" == "true" ]]; then
-			CGO_ENABLED="1"
-		elif [[ "${value}" == "false" ]]; then
-			CGO_ENABLED="0"
-		else
-			CGO_ENABLED="${value}"
-		fi
+		CGO_ENABLED="${1#*=}"
 		;;
 	--apple-simulator)
 		APPLE_SIMULATOR="true"
