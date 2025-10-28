@@ -408,6 +408,7 @@ reset_cgo() {
 	MORE_CGO_CXXFLAGS=""
 	MORE_CGO_LDFLAGS=""
 	EXTRA_PATH=""
+	EXTRA_LIBRARY_PATH=""
 }
 
 # Converts relative CC/CXX paths to absolute paths
@@ -789,6 +790,32 @@ init_ios_simulator_cross_compiler() {
 	esac
 }
 
+# Fixes rpath for Darwin/iOS linkers
+# Returns: 0 on success, sets EXTRA_LIBRARY_PATH if using environment variable fallback
+fix_darwin_linker_rpath() {
+	local compiler_dir="$1"
+	local arch_prefix="$2"
+	local linker_path="${compiler_dir}/bin/${arch_prefix}-apple-darwin"*"-ld"
+
+	# Try patchelf first
+	if command -v patchelf &>/dev/null; then
+		if patchelf --set-rpath "${compiler_dir}/lib" ${linker_path} 2>/dev/null; then
+			return 0
+		fi
+	fi
+
+	# Try chrpath as fallback
+	if command -v chrpath &>/dev/null; then
+		if chrpath -r "${compiler_dir}/lib" ${linker_path} 2>/dev/null; then
+			return 0
+		fi
+	fi
+
+	# Fallback to environment variable approach
+	EXTRA_LIBRARY_PATH="${compiler_dir}/lib"
+	return 0
+}
+
 # Sets up existing iOS cross-compiler environment
 setup_existing_ios_cross_compiler() {
 	local cross_compiler_name="$1"
@@ -797,8 +824,7 @@ setup_existing_ios_cross_compiler() {
 	_CC="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix}-clang"
 	_CXX="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix}-clang++"
 	EXTRA_PATH="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin:${CROSS_COMPILER_DIR}/${cross_compiler_name}/clang/bin"
-	patchelf --set-rpath "${CROSS_COMPILER_DIR}/${cross_compiler_name}/lib" \
-		"${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix%%-*}-apple-darwin"*"-ld" || return 2
+	fix_darwin_linker_rpath "${CROSS_COMPILER_DIR}/${cross_compiler_name}" "${compiler_prefix%%-*}"
 }
 
 # Downloads iOS cross-compiler
@@ -895,8 +921,7 @@ setup_existing_osx_cross_compiler() {
 	_CC="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix}-clang"
 	_CXX="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix}-clang++"
 	EXTRA_PATH="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin:${CROSS_COMPILER_DIR}/${cross_compiler_name}/clang/bin"
-	patchelf --set-rpath "${CROSS_COMPILER_DIR}/${cross_compiler_name}/lib" \
-		"${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix%%-*}-apple-darwin"*"-ld" || return 2
+	fix_darwin_linker_rpath "${CROSS_COMPILER_DIR}/${cross_compiler_name}" "${compiler_prefix%%-*}"
 }
 
 # Downloads macOS cross-compiler
@@ -1421,6 +1446,15 @@ build_target_with_micro() {
 		fi
 
 		build_env+=("PATH=${EXTRA_PATH:+$EXTRA_PATH:}$PATH")
+
+		# Set up library path if needed (e.g., for linker when patchelf/chrpath not available)
+		if [[ -n "$EXTRA_LIBRARY_PATH" ]]; then
+			if [[ "$GOHOSTOS" == "darwin" ]]; then
+				build_env+=("DYLD_LIBRARY_PATH=${EXTRA_LIBRARY_PATH}${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}")
+			else
+				build_env+=("LD_LIBRARY_PATH=${EXTRA_LIBRARY_PATH}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}")
+			fi
+		fi
 
 		case "$code" in
 		0)
