@@ -1,3 +1,3 @@
-module github.com/zijiren233/go-build-action
+module github.com/zijiren233/go-cross
 
 go 1.16

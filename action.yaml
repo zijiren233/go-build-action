@@ -6,6 +6,10 @@ branding:
   color: "green"
 
 inputs:
+  command:
+    description: "Command to execute (build, run, test, bench)"
+    required: false
+    default: "build"
   source-dir:
     description: "The directory containing the Go project to build"
     required: false
@@ -118,12 +122,13 @@ runs:
       run: |
         "${{ github.action_path }}/cross.sh" --show-all-targets
 
-    - name: Build
-      id: build
+    - name: Execute Go Command
+      id: execute
       if: ${{ inputs.show-all-targets == 'false' }}
       shell: bash
       working-directory: ${{ inputs.source-dir }}
       env:
+        COMMAND: ${{ inputs.command }}
         BUILD_CONFIG: ${{ inputs.build-config }}
         CGO_ENABLED: ${{ inputs.cgo-enabled }}
         RESULT_DIR: ${{ inputs.result-dir }}

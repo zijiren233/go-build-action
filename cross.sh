@@ -38,6 +38,8 @@ readonly DEFAULT_EXT_LDFLAGS=""
 readonly DEFAULT_CGO_DEPS_VERSION="v0.6.6"
 readonly DEFAULT_TTY_WIDTH="40"
 readonly DEFAULT_NDK_VERSION="r27"
+readonly DEFAULT_COMMAND="build"
+readonly SUPPORTED_COMMANDS="build|run|test|bench"
 
 # -----------------------------------------------------------------------------
 # Host Environment Detection
@@ -164,8 +166,13 @@ print_env_help() {
 
 # Prints help information about command-line arguments
 print_help() {
-	echo -e "${COLOR_LIGHT_GREEN}Usage:${COLOR_RESET}"
-	echo -e "  $(basename "$0") [options]"
+	echo -e "${COLOR_LIGHT_GREEN}Usage:${COLOR_RESET} ${COLOR_LIGHT_CYAN}[command] [options]${COLOR_RESET}"
+	echo -e ""
+	echo -e "${COLOR_LIGHT_GREEN}Commands:${COLOR_RESET}"
+	echo -e "  ${COLOR_LIGHT_CYAN}build${COLOR_RESET}       Build the project (default)"
+	echo -e "  ${COLOR_LIGHT_CYAN}run${COLOR_RESET}         Compile and run the project"
+	echo -e "  ${COLOR_LIGHT_CYAN}test${COLOR_RESET}        Run tests"
+	echo -e "  ${COLOR_LIGHT_CYAN}bench${COLOR_RESET}       Run benchmarks"
 	echo -e ""
 	echo -e "${COLOR_LIGHT_RED}Options:${COLOR_RESET}"
 	echo -e "  ${COLOR_LIGHT_BLUE}--bin-name=<name>${COLOR_RESET}                 - Specify the binary name (default: source directory basename)"
@@ -1396,8 +1403,12 @@ build_target_with_micro() {
 	local buildmode=$BUILDMODE
 	local ext=$(extension "${goos}" "${buildmode}")
 	local target_file="${RESULT_DIR}/${BIN_NAME}"
-	[ -z "$BIN_NAME_NO_SUFFIX" ] && target_file="${target_file}-${goos}-${goarch}${micro:+"-${micro//[.,]/-}"}" || true
-	target_file="${target_file}${ext}"
+
+	# For non-build commands, we don't need target file with suffix
+	if [[ "$COMMAND" == "build" ]]; then
+		[ -z "$BIN_NAME_NO_SUFFIX" ] && target_file="${target_file}-${goos}-${goarch}${micro:+"-${micro//[.,]/-}"}" || true
+		target_file="${target_file}${ext}"
+	fi
 
 	# Set micro architecture specific environment variables.
 	case "${goarch}" in
@@ -1436,7 +1447,8 @@ build_target_with_micro() {
 		;;
 	esac
 
-	echo -e "${COLOR_LIGHT_MAGENTA}Building ${goos}/${goarch}${micro:+/${micro}}...${COLOR_RESET}"
+	local command_capitalized="$(echo "${COMMAND:0:1}" | tr '[:lower:]' '[:upper:]')${COMMAND:1}"
+	echo -e "${COLOR_LIGHT_MAGENTA}${command_capitalized} ${goos}/${goarch}${micro:+/${micro}}...${COLOR_RESET}"
 
 	if is_cgo_enabled; then
 		if init_cgo_deps "${goos}" "${goarch}" "${micro}"; then
@@ -1476,13 +1488,30 @@ build_target_with_micro() {
 
 	local full_ldflags="${LDFLAGS}${EXT_LDFLAGS:+ -extldflags '$EXT_LDFLAGS'}"
 
-	# Build the go build command dynamically, checking environment variables
-	local go_build_cmd="go build -buildmode=$buildmode -trimpath"
+	# Build the go command dynamically based on COMMAND variable
+	local go_build_cmd="go ${COMMAND}"
+
+	# Add command-specific flags
+	case "${COMMAND}" in
+	"build")
+		go_build_cmd="$go_build_cmd -buildmode=$buildmode -trimpath"
+		;;
+	"test")
+		# Test command doesn't use buildmode or output flags
+		;;
+	"bench")
+		# Benchmark is actually 'go test -bench'
+		go_build_cmd="go test -bench=."
+		;;
+	"run")
+		# Run command doesn't use buildmode
+		;;
+	esac
 
 	# Add build args from ADD_GO_BUILD_ARGS variable
 	[[ -n "$ADD_GO_BUILD_ARGS" ]] && go_build_cmd="$go_build_cmd $ADD_GO_BUILD_ARGS"
 
-	# Add boolean flag build args
+	# Add boolean flag build args (applicable to most commands)
 	[[ "$GO_RACE" = "true" ]] && go_build_cmd="$go_build_cmd -race"
 	[[ "$GO_A" = "true" ]] && go_build_cmd="$go_build_cmd -a"
 	[[ "$GO_V" = "true" ]] && go_build_cmd="$go_build_cmd -v"
@@ -1493,11 +1522,18 @@ build_target_with_micro() {
 	# Add tags if set
 	[[ -n "$BUILD_TAGS" ]] && go_build_cmd="$go_build_cmd -tags \"${BUILD_TAGS}\""
 
-	# Add ldflags
-	go_build_cmd="$go_build_cmd -ldflags \"${full_ldflags}\""
+	# Add ldflags (for build and run commands)
+	if [[ "$COMMAND" == "build" ]] || [[ "$COMMAND" == "run" ]]; then
+		go_build_cmd="$go_build_cmd -ldflags \"${full_ldflags}\""
+	fi
 
-	# Add output and source
-	go_build_cmd="$go_build_cmd -o \"${target_file}\" \"${SOURCE_DIR}\""
+	# Add output file (only for build command)
+	if [[ "$COMMAND" == "build" ]]; then
+		go_build_cmd="$go_build_cmd -o \"${target_file}\""
+	fi
+
+	# Add source directory
+	go_build_cmd="$go_build_cmd \"${SOURCE_DIR}\""
 
 	log_info "Run command:"
 	for var in "${build_env[@]}"; do
@@ -1517,7 +1553,13 @@ build_target_with_micro() {
 
 	eval env '"${build_env[@]}"' "$go_build_cmd"
 	local end_time=$(date +%s)
-	log_success "Build successful: ${goos}/${goarch}${micro:+ ${micro}} (took $((end_time - start_time))s, size: $(du -sh "${target_file}" | cut -f1))"
+
+	# Show appropriate success message based on command
+	if [[ "$COMMAND" == "build" ]]; then
+		log_success "${command_capitalized} successful: ${goos}/${goarch}${micro:+ ${micro}} (took $((end_time - start_time))s, size: $(du -sh "${target_file}" | cut -f1))"
+	else
+		log_success "${command_capitalized} successful: ${goos}/${goarch}${micro:+ ${micro}} (took $((end_time - start_time))s)"
+	fi
 }
 
 # -----------------------------------------------------------------------------
@@ -1535,7 +1577,8 @@ auto_build() {
 		log_error "Supported targets: ${COLOR_LIGHT_CYAN}${ALLOWED_PLATFORMS}${COLOR_RESET}" &&
 		return 1
 
-	log_info "Building Targets: ${COLOR_LIGHT_GREEN}${targets}${COLOR_RESET}" 1>&2
+	local command_capitalized="$(echo "${COMMAND:0:1}" | tr '[:lower:]' '[:upper:]')${COMMAND:1}"
+	log_info "${command_capitalized} Targets: ${COLOR_LIGHT_GREEN}${targets}${COLOR_RESET}" 1>&2
 	local start_time=$(date +%s)
 	if declare -f init_dep >/dev/null; then
 		init_dep
@@ -1582,6 +1625,7 @@ print_var() {
 set_default "SOURCE_DIR" "${DEFAULT_SOURCE_DIR}"
 SOURCE_DIR="$(cd "${SOURCE_DIR}" && pwd)"
 set_default "BUILD_CONFIG" "${SOURCE_DIR}/build.config.sh"
+set_default "COMMAND" "${DEFAULT_COMMAND}"
 
 init_targets
 print_var
@@ -1598,6 +1642,13 @@ fi
 # -----------------------------------------------------------------------------
 
 while [[ $# -gt 0 ]]; do
+	# Check if current argument is a command
+	if [[ "$1" =~ ^(${SUPPORTED_COMMANDS})$ ]]; then
+		COMMAND="$1"
+		shift
+		continue
+	fi
+
 	case "${1}" in
 	-h | --help)
 		print_help

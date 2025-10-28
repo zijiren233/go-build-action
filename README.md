@@ -13,7 +13,7 @@ jobs:
           go-version: 1.23
 
       - name: Go Build
-        uses: zijiren233/go-build-action@v1
+        uses: zijiren233/go-cross@v1
         with:
           targets: linux/amd64,linux/arm64,windows/amd64
           # targets: linux/*
@@ -38,11 +38,14 @@ jobs:
           go-version: 1.23
 
       - name: Build targets
-        uses: zijiren233/go-build-action@v1
+        uses: zijiren233/go-cross@v1
         with:
           targets: ${{ matrix.target }}
 ```
 
 ```bash
-curl -sL https://raw.githubusercontent.com/zijiren233/go-build-action/refs/tags/v1/cross.sh | bash -s -- --show-all-targets
+curl -sL https://raw.githubusercontent.com/zijiren233/go-cross/refs/tags/v1/cross.sh | bash -s -- --show-all-targets
+go install github.com/zijiren233/go-cross@v1
+go-cross build --target 'linux/arm64'
+go-cross test --target 'linux/amd64'
 ```
