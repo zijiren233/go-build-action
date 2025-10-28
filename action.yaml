@@ -1,4 +1,4 @@
-name: "Go Cross Build"
+name: "Go Cross Action"
 description: "A configurable GitHub Action to build Go projects with cross-compilation support"
 
 branding:
