@@ -40,6 +40,7 @@ readonly DEFAULT_TTY_WIDTH="40"
 readonly DEFAULT_NDK_VERSION="r27"
 readonly DEFAULT_COMMAND="build"
 readonly SUPPORTED_COMMANDS="build|run|test|bench"
+readonly DEFAULT_PACKAGE="."
 
 # -----------------------------------------------------------------------------
 # Host Environment Detection
@@ -166,7 +167,7 @@ print_env_help() {
 
 # Prints help information about command-line arguments
 print_help() {
-	echo -e "${COLOR_LIGHT_GREEN}Usage:${COLOR_RESET} ${COLOR_LIGHT_CYAN}[command] [options]${COLOR_RESET}"
+	echo -e "${COLOR_LIGHT_GREEN}Usage:${COLOR_RESET} ${COLOR_LIGHT_CYAN}[command] [options] [packages]${COLOR_RESET}"
 	echo -e ""
 	echo -e "${COLOR_LIGHT_GREEN}Commands:${COLOR_RESET}"
 	echo -e "  ${COLOR_LIGHT_CYAN}build${COLOR_RESET}       Build the project (default)"
@@ -175,34 +176,60 @@ print_help() {
 	echo -e "  ${COLOR_LIGHT_CYAN}bench${COLOR_RESET}       Run benchmarks"
 	echo -e ""
 	echo -e "${COLOR_LIGHT_RED}Options:${COLOR_RESET}"
-	echo -e "  ${COLOR_LIGHT_BLUE}--bin-name=<name>${COLOR_RESET}                 - Specify the binary name (default: source directory basename)"
-	echo -e "  ${COLOR_LIGHT_BLUE}--bin-name-no-suffix${COLOR_RESET}              - Do not append the architecture suffix to the binary name"
-	echo -e "  ${COLOR_LIGHT_BLUE}--buildmode=<mode>${COLOR_RESET}                - Set the build mode (default: ${DEFAULT_BUILDMODE})"
-	echo -e "  ${COLOR_LIGHT_BLUE}--cross-compiler-dir=<dir>${COLOR_RESET}        - Specify the cross compiler directory (default: ${DEFAULT_CROSS_COMPILER_DIR})"
-	echo -e "  ${COLOR_LIGHT_BLUE}--cgo-enabled${COLOR_RESET}                     - Enable CGO (default: disabled)"
-	echo -e "  ${COLOR_LIGHT_BLUE}--cgo-enabled=<value>${COLOR_RESET}             - Set CGO enabled value (default: disabled)"
-	echo -e "  ${COLOR_LIGHT_BLUE}--use-gnu-libc${COLOR_RESET}                    - Use GNU libc instead of musl for Linux targets"
-	echo -e "  ${COLOR_LIGHT_BLUE}-eh, --env-help${COLOR_RESET}                   - Display help information about environment variables"
-	echo -e "  ${COLOR_LIGHT_BLUE}--enable-micro${COLOR_RESET}                    - Enable building micro architecture variants"
-	echo -e "  ${COLOR_LIGHT_BLUE}--ext-ldflags='<flags>'${COLOR_RESET}           - Set external linker flags (default: \"${DEFAULT_EXT_LDFLAGS}\")"
-	echo -e "  ${COLOR_LIGHT_BLUE}--cc=<path>${COLOR_RESET}                       - Force set the use of a specific C compiler"
-	echo -e "  ${COLOR_LIGHT_BLUE}--cxx=<path>${COLOR_RESET}                      - Force set the use of a specific C++ compiler"
-	echo -e "  ${COLOR_LIGHT_BLUE}--use-default-cc-cxx${COLOR_RESET}              - Use the default C and C++ compilers (${DEFAULT_CC} and ${DEFAULT_CXX})"
-	echo -e "  ${COLOR_LIGHT_BLUE}--github-proxy-mirror=<url>${COLOR_RESET}       - Use a GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
-	echo -e "  ${COLOR_LIGHT_BLUE}-h, --help${COLOR_RESET}                        - Display this help message"
-	echo -e "  ${COLOR_LIGHT_BLUE}--ldflags='<flags>'${COLOR_RESET}               - Set linker flags (default: \"${DEFAULT_LDFLAGS}\")"
-	echo -e "  ${COLOR_LIGHT_BLUE}--add-go-build-args='<args>'${COLOR_RESET}      - Pass additional arguments to the 'go build' command"
-	echo -e "  ${COLOR_LIGHT_BLUE}-race${COLOR_RESET}                             - Enable race detection"
+	echo -e "${COLOR_LIGHT_YELLOW}Standard Go Build Flags:${COLOR_RESET}"
+	echo -e "  ${COLOR_LIGHT_BLUE}-C <dir>${COLOR_RESET}                          - Change to dir before running the command"
 	echo -e "  ${COLOR_LIGHT_BLUE}-a${COLOR_RESET}                                - Force rebuilding of packages that are already up-to-date"
 	echo -e "  ${COLOR_LIGHT_BLUE}-n${COLOR_RESET}                                - Print the commands but do not run them"
-	echo -e "  ${COLOR_LIGHT_BLUE}-x${COLOR_RESET}                                - Print the commands"
+	echo -e "  ${COLOR_LIGHT_BLUE}-p <n>${COLOR_RESET}                            - Number of programs that can be run in parallel"
+	echo -e "  ${COLOR_LIGHT_BLUE}-race${COLOR_RESET}                             - Enable data race detection"
+	echo -e "  ${COLOR_LIGHT_BLUE}-msan${COLOR_RESET}                             - Enable interoperation with memory sanitizer"
+	echo -e "  ${COLOR_LIGHT_BLUE}-asan${COLOR_RESET}                             - Enable interoperation with address sanitizer"
+	echo -e "  ${COLOR_LIGHT_BLUE}-cover${COLOR_RESET}                            - Enable code coverage instrumentation"
+	echo -e "  ${COLOR_LIGHT_BLUE}-covermode <mode>${COLOR_RESET}                 - Set the mode for coverage analysis (set,count,atomic)"
+	echo -e "  ${COLOR_LIGHT_BLUE}-coverpkg <pattern>${COLOR_RESET}               - Apply coverage analysis to packages matching pattern"
 	echo -e "  ${COLOR_LIGHT_BLUE}-v${COLOR_RESET}                                - Print the names of packages as they are compiled"
 	echo -e "  ${COLOR_LIGHT_BLUE}-work${COLOR_RESET}                             - Print the name of the temporary work directory and do not delete it when exiting"
-	echo -e "  ${COLOR_LIGHT_BLUE}--ndk-version=<version>${COLOR_RESET}           - Specify the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
-	echo -e "  ${COLOR_LIGHT_BLUE}-t=<targets>, --targets=<targets>${COLOR_RESET} - Specify target target(s) (default: host target, supports: all, linux, linux/arm*, ...)"
-	echo -e "  ${COLOR_LIGHT_BLUE}--result-dir=<dir>${COLOR_RESET}                - Specify the build result directory (default: ${DEFAULT_RESULT_DIR})"
-	echo -e "  ${COLOR_LIGHT_BLUE}--show-all-targets${COLOR_RESET}                - Display all supported target targets"
-	echo -e "  ${COLOR_LIGHT_BLUE}--tags='<tags>'${COLOR_RESET}                   - Set build tags"
+	echo -e "  ${COLOR_LIGHT_BLUE}-x${COLOR_RESET}                                - Print the commands"
+	echo -e "  ${COLOR_LIGHT_BLUE}-asmflags <flags>${COLOR_RESET}                 - Arguments to pass on each go tool asm invocation"
+	echo -e "  ${COLOR_LIGHT_BLUE}-buildmode <mode>${COLOR_RESET}                 - Build mode to use (default: ${DEFAULT_BUILDMODE})"
+	echo -e "  ${COLOR_LIGHT_BLUE}-buildvcs <bool>${COLOR_RESET}                  - Whether to stamp binaries with version control information"
+	echo -e "  ${COLOR_LIGHT_BLUE}-compiler <name>${COLOR_RESET}                  - Name of compiler to use (gccgo or gc)"
+	echo -e "  ${COLOR_LIGHT_BLUE}-gccgoflags <flags>${COLOR_RESET}               - Arguments to pass on each gccgo compiler/linker invocation"
+	echo -e "  ${COLOR_LIGHT_BLUE}-gcflags <flags>${COLOR_RESET}                  - Arguments to pass on each go tool compile invocation"
+	echo -e "  ${COLOR_LIGHT_BLUE}-installsuffix <suffix>${COLOR_RESET}           - A suffix to use in the name of the package installation directory"
+	echo -e "  ${COLOR_LIGHT_BLUE}-json${COLOR_RESET}                             - Emit build output in JSON format"
+	echo -e "  ${COLOR_LIGHT_BLUE}-ldflags <flags>${COLOR_RESET}                  - Arguments to pass on each go tool link invocation (default: \"${DEFAULT_LDFLAGS}\")"
+	echo -e "  ${COLOR_LIGHT_BLUE}-linkshared${COLOR_RESET}                       - Build code that will be linked against shared libraries"
+	echo -e "  ${COLOR_LIGHT_BLUE}-mod <mode>${COLOR_RESET}                       - Module download mode (readonly, vendor, or mod)"
+	echo -e "  ${COLOR_LIGHT_BLUE}-modcacherw${COLOR_RESET}                       - Leave newly-created directories in the module cache read-write"
+	echo -e "  ${COLOR_LIGHT_BLUE}-modfile <file>${COLOR_RESET}                   - Read an alternate go.mod file"
+	echo -e "  ${COLOR_LIGHT_BLUE}-overlay <file>${COLOR_RESET}                   - Read a JSON config file that provides an overlay for build operations"
+	echo -e "  ${COLOR_LIGHT_BLUE}-pgo <file>${COLOR_RESET}                       - Specify the file path of a profile for profile-guided optimization"
+	echo -e "  ${COLOR_LIGHT_BLUE}-pkgdir <dir>${COLOR_RESET}                     - Install and load all packages from dir"
+	echo -e "  ${COLOR_LIGHT_BLUE}-tags <tags>${COLOR_RESET}                      - A comma-separated list of build tags"
+	echo -e "  ${COLOR_LIGHT_BLUE}-trimpath${COLOR_RESET}                         - Remove all file system paths from the resulting executable"
+	echo -e "  ${COLOR_LIGHT_BLUE}-toolexec <cmd>${COLOR_RESET}                   - A program to use to invoke toolchain programs"
+	echo -e ""
+	echo -e "${COLOR_LIGHT_YELLOW}Cross-Compilation Specific Options:${COLOR_RESET}"
+	echo -e "  ${COLOR_LIGHT_BLUE}-bin-name <name>${COLOR_RESET}                  - Specify the binary name (default: source directory basename)"
+	echo -e "  ${COLOR_LIGHT_BLUE}-bin-name-no-suffix${COLOR_RESET}              - Do not append the architecture suffix to the binary name"
+	echo -e "  ${COLOR_LIGHT_BLUE}-cross-compiler-dir <dir>${COLOR_RESET}        - Specify the cross compiler directory (default: ${DEFAULT_CROSS_COMPILER_DIR})"
+	echo -e "  ${COLOR_LIGHT_BLUE}-cgo-enabled${COLOR_RESET}                     - Enable CGO (default: disabled)"
+	echo -e "  ${COLOR_LIGHT_BLUE}-use-gnu-libc${COLOR_RESET}                    - Use GNU libc instead of musl for Linux targets"
+	echo -e "  ${COLOR_LIGHT_BLUE}-enable-micro${COLOR_RESET}                    - Enable building micro architecture variants"
+	echo -e "  ${COLOR_LIGHT_BLUE}-ext-ldflags <flags>${COLOR_RESET}             - Set external linker flags (default: \"${DEFAULT_EXT_LDFLAGS}\")"
+	echo -e "  ${COLOR_LIGHT_BLUE}-cc <path>${COLOR_RESET}                       - Force set the use of a specific C compiler"
+	echo -e "  ${COLOR_LIGHT_BLUE}-cxx <path>${COLOR_RESET}                      - Force set the use of a specific C++ compiler"
+	echo -e "  ${COLOR_LIGHT_BLUE}-use-default-cc-cxx${COLOR_RESET}              - Use the default C and C++ compilers (${DEFAULT_CC} and ${DEFAULT_CXX})"
+	echo -e "  ${COLOR_LIGHT_BLUE}-github-proxy-mirror <url>${COLOR_RESET}       - Use a GitHub proxy mirror (e.g., https://mirror.ghproxy.com/)"
+	echo -e "  ${COLOR_LIGHT_BLUE}-ndk-version <version>${COLOR_RESET}           - Specify the Android NDK version (default: ${DEFAULT_NDK_VERSION})"
+	echo -e "  ${COLOR_LIGHT_BLUE}-t <targets>${COLOR_RESET}                     - Specify target platform(s) (default: host platform, supports: all, linux, linux/arm*, ...)"
+	echo -e "  ${COLOR_LIGHT_BLUE}-result-dir <dir>${COLOR_RESET}                - Specify the build result directory (default: ${DEFAULT_RESULT_DIR})"
+	echo -e "  ${COLOR_LIGHT_BLUE}-show-all-targets${COLOR_RESET}                - Display all supported target platforms"
+	echo -e ""
+	echo -e "${COLOR_LIGHT_YELLOW}Other Options:${COLOR_RESET}"
+	echo -e "  ${COLOR_LIGHT_BLUE}-h${COLOR_RESET}                                - Display this help message"
+	echo -e "  ${COLOR_LIGHT_BLUE}-eh${COLOR_RESET}                               - Display help information about environment variables"
 
 	if declare -f print_dep_help >/dev/null; then
 		echo -e "${COLOR_LIGHT_MAGENTA}$(print_separator)${COLOR_RESET}"
@@ -220,7 +247,8 @@ print_help() {
 
 # Appends tags to the TAGS variable
 add_tags() {
-	BUILD_TAGS="$(echo "$BUILD_TAGS $@" | sed 's/ //g' | sed 's/"//g' | sed 's/\n//g')"
+	# Convert space-separated tags to comma-separated, remove quotes and newlines
+	BUILD_TAGS="$(echo "$BUILD_TAGS $@" | sed 's/"//g' | sed 's/\n//g' | tr -s ' ' ',' | sed 's/^,//g' | sed 's/,,*/,/g')"
 }
 
 # Appends linker flags to the LDFLAGS variable
@@ -1491,10 +1519,15 @@ build_target_with_micro() {
 	# Build the go command dynamically based on COMMAND variable
 	local go_build_cmd="go ${COMMAND}"
 
+	# Add -C flag first if specified
+	[[ -n "$GO_CHANGE_DIR" ]] && go_build_cmd="$go_build_cmd -C \"${GO_CHANGE_DIR}\""
+
 	# Add command-specific flags
 	case "${COMMAND}" in
 	"build")
-		go_build_cmd="$go_build_cmd -buildmode=$buildmode -trimpath"
+		go_build_cmd="$go_build_cmd -buildmode=$buildmode"
+		# Add -trimpath unless GO_TRIMPATH is explicitly set
+		[[ "$GO_TRIMPATH" = "true" || -z "$GO_TRIMPATH" ]] && go_build_cmd="$go_build_cmd -trimpath"
 		;;
 	"test")
 		# Test command doesn't use buildmode or output flags
@@ -1508,23 +1541,40 @@ build_target_with_micro() {
 		;;
 	esac
 
-	# Add build args from ADD_GO_BUILD_ARGS variable
-	[[ -n "$ADD_GO_BUILD_ARGS" ]] && go_build_cmd="$go_build_cmd $ADD_GO_BUILD_ARGS"
-
-	# Add boolean flag build args (applicable to most commands)
-	[[ "$GO_RACE" = "true" ]] && go_build_cmd="$go_build_cmd -race"
+	# Add standard go build flags
 	[[ "$GO_A" = "true" ]] && go_build_cmd="$go_build_cmd -a"
-	[[ "$GO_V" = "true" ]] && go_build_cmd="$go_build_cmd -v"
-	[[ "$GO_X" = "true" ]] && go_build_cmd="$go_build_cmd -x"
 	[[ "$GO_N" = "true" ]] && go_build_cmd="$go_build_cmd -n"
+	[[ -n "$GO_P" ]] && go_build_cmd="$go_build_cmd -p ${GO_P}"
+	[[ "$GO_RACE" = "true" ]] && go_build_cmd="$go_build_cmd -race"
+	[[ "$GO_MSAN" = "true" ]] && go_build_cmd="$go_build_cmd -msan"
+	[[ "$GO_ASAN" = "true" ]] && go_build_cmd="$go_build_cmd -asan"
+	[[ "$GO_COVER" = "true" ]] && go_build_cmd="$go_build_cmd -cover"
+	[[ -n "$GO_COVERMODE" ]] && go_build_cmd="$go_build_cmd -covermode ${GO_COVERMODE}"
+	[[ -n "$GO_COVERPKG" ]] && go_build_cmd="$go_build_cmd -coverpkg \"${GO_COVERPKG}\""
+	[[ "$GO_V" = "true" ]] && go_build_cmd="$go_build_cmd -v"
 	[[ "$GO_WORK" = "true" ]] && go_build_cmd="$go_build_cmd -work"
-
-	# Add tags if set
+	[[ "$GO_X" = "true" ]] && go_build_cmd="$go_build_cmd -x"
+	[[ -n "$GO_ASMFLAGS" ]] && go_build_cmd="$go_build_cmd -asmflags \"${GO_ASMFLAGS}\""
+	[[ -n "$GO_BUILDVCS" ]] && go_build_cmd="$go_build_cmd -buildvcs ${GO_BUILDVCS}"
+	[[ -n "$GO_COMPILER" ]] && go_build_cmd="$go_build_cmd -compiler ${GO_COMPILER}"
+	[[ -n "$GO_GCCGOFLAGS" ]] && go_build_cmd="$go_build_cmd -gccgoflags \"${GO_GCCGOFLAGS}\""
+	[[ -n "$GO_GCFLAGS" ]] && go_build_cmd="$go_build_cmd -gcflags \"${GO_GCFLAGS}\""
+	[[ -n "$GO_INSTALLSUFFIX" ]] && go_build_cmd="$go_build_cmd -installsuffix ${GO_INSTALLSUFFIX}"
+	[[ "$GO_JSON" = "true" ]] && go_build_cmd="$go_build_cmd -json"
+	[[ "$GO_LINKSHARED" = "true" ]] && go_build_cmd="$go_build_cmd -linkshared"
+	[[ -n "$GO_MOD" ]] && go_build_cmd="$go_build_cmd -mod ${GO_MOD}"
+	[[ "$GO_MODCACHERW" = "true" ]] && go_build_cmd="$go_build_cmd -modcacherw"
+	[[ -n "$GO_MODFILE" ]] && go_build_cmd="$go_build_cmd -modfile \"${GO_MODFILE}\""
+	[[ -n "$GO_OVERLAY" ]] && go_build_cmd="$go_build_cmd -overlay \"${GO_OVERLAY}\""
+	[[ -n "$GO_PGO" ]] && go_build_cmd="$go_build_cmd -pgo \"${GO_PGO}\""
+	[[ -n "$GO_PKGDIR" ]] && go_build_cmd="$go_build_cmd -pkgdir \"${GO_PKGDIR}\""
 	[[ -n "$BUILD_TAGS" ]] && go_build_cmd="$go_build_cmd -tags \"${BUILD_TAGS}\""
+	[[ "$GO_TRIMPATH" = "false" ]] && : # Already handled in build section
+	[[ -n "$GO_TOOLEXEC" ]] && go_build_cmd="$go_build_cmd -toolexec \"${GO_TOOLEXEC}\""
 
 	# Add ldflags (for build and run commands)
 	if [[ "$COMMAND" == "build" ]] || [[ "$COMMAND" == "run" ]]; then
-		go_build_cmd="$go_build_cmd -ldflags \"${full_ldflags}\""
+		[[ -n "$full_ldflags" ]] && go_build_cmd="$go_build_cmd -ldflags \"${full_ldflags}\""
 	fi
 
 	# Add output file (only for build command)
@@ -1532,8 +1582,11 @@ build_target_with_micro() {
 		go_build_cmd="$go_build_cmd -o \"${target_file}\""
 	fi
 
-	# Add source directory
-	go_build_cmd="$go_build_cmd \"${SOURCE_DIR}\""
+	# Add build args from ADD_GO_BUILD_ARGS variable
+	[[ -n "$ADD_GO_BUILD_ARGS" ]] && go_build_cmd="$go_build_cmd $ADD_GO_BUILD_ARGS"
+
+	# Add package path (defaults to current directory)
+	go_build_cmd="$go_build_cmd ${PACKAGE}"
 
 	log_info "Run command:"
 	for var in "${build_env[@]}"; do
@@ -1604,8 +1657,6 @@ load_build_config() {
 		source "${BUILD_CONFIG}" && return 0
 		log_error "Failed to load build configuration from ${BUILD_CONFIG}" 1>&2
 		exit 1
-	else
-		log_warning "Skipping config (file not found): ${COLOR_LIGHT_GREEN}${BUILD_CONFIG}${COLOR_RESET}" 1>&2
 	fi
 }
 
@@ -1626,6 +1677,7 @@ set_default "SOURCE_DIR" "${DEFAULT_SOURCE_DIR}"
 SOURCE_DIR="$(cd "${SOURCE_DIR}" && pwd)"
 set_default "BUILD_CONFIG" "${SOURCE_DIR}/build.config.sh"
 set_default "COMMAND" "${DEFAULT_COMMAND}"
+set_default "PACKAGE" "${DEFAULT_PACKAGE}"
 
 init_targets
 print_var
@@ -1641,6 +1693,9 @@ fi
 # Argument Parsing
 # -----------------------------------------------------------------------------
 
+# Array to collect package paths (non-option arguments)
+PACKAGE_PATHS=()
+
 while [[ $# -gt 0 ]]; do
 	# Check if current argument is a command
 	if [[ "$1" =~ ^(${SUPPORTED_COMMANDS})$ ]]; then
@@ -1649,165 +1704,219 @@ while [[ $# -gt 0 ]]; do
 		continue
 	fi
 
+	# Handle arguments that don't start with - as package paths
+	if [[ ! "$1" =~ ^- ]]; then
+		PACKAGE_PATHS+=("$1")
+		shift
+		continue
+	fi
+
 	case "${1}" in
-	-h | --help)
+	-h)
 		print_help
 		exit 0
 		;;
-	-eh | --env-help)
+	-eh)
 		print_env_help
 		exit 0
 		;;
-	--buildmode=*)
-		BUILDMODE="${1#*=}"
-		;;
-	--buildmode)
+	# Standard Go build flags
+	-C)
 		shift
-		BUILDMODE="$(parse_option_value "--buildmode" "$@")"
-		;;
-	--bin-name=*)
-		BIN_NAME="${1#*=}"
-		;;
-	--bin-name)
-		shift
-		BIN_NAME="$(parse_option_value "--bin-name" "$@")"
-		;;
-	--bin-name-no-suffix)
-		BIN_NAME_NO_SUFFIX="true"
-		;;
-	--add-go-build-args=*)
-		ADD_GO_BUILD_ARGS="${ADD_GO_BUILD_ARGS:+$ADD_GO_BUILD_ARGS }${1#*=}"
-		;;
-	--add-go-build-args)
-		shift
-		ADD_GO_BUILD_ARGS="${ADD_GO_BUILD_ARGS:+$ADD_GO_BUILD_ARGS }$(parse_option_value "--add-go-build-args" "$@")"
-		;;
-	-race)
-		GO_RACE="true"
+		GO_CHANGE_DIR="$(parse_option_value "-C" "$@")"
 		;;
 	-a)
 		GO_A="true"
 		;;
-	-v)
-		GO_V="true"
-		;;
-	-x)
-		GO_X="true"
-		;;
 	-n)
 		GO_N="true"
+		;;
+	-p)
+		shift
+		GO_P="$(parse_option_value "-p" "$@")"
+		;;
+	-race)
+		GO_RACE="true"
+		;;
+	-msan)
+		GO_MSAN="true"
+		;;
+	-asan)
+		GO_ASAN="true"
+		;;
+	-cover)
+		GO_COVER="true"
+		;;
+	-covermode)
+		shift
+		GO_COVERMODE="$(parse_option_value "-covermode" "$@")"
+		;;
+	-coverpkg)
+		shift
+		GO_COVERPKG="$(parse_option_value "-coverpkg" "$@")"
+		;;
+	-v)
+		GO_V="true"
 		;;
 	-work)
 		GO_WORK="true"
 		;;
-	--enable-micro)
-		ENABLE_MICRO="true"
+	-x)
+		GO_X="true"
 		;;
-	--ldflags=*)
-		LDFLAGS="${LDFLAGS:+$LDFLAGS }${1#*=}"
-		;;
-	--ldflags)
+	-asmflags)
 		shift
-		LDFLAGS="${LDFLAGS:+$LDFLAGS }$(parse_option_value "--ldflags" "$@")"
+		GO_ASMFLAGS="$(parse_option_value "-asmflags" "$@")"
 		;;
-	--ext-ldflags=*)
-		EXT_LDFLAGS="${EXT_LDFLAGS:+$EXT_LDFLAGS }${1#*=}"
-		;;
-	--ext-ldflags)
+	-buildmode)
 		shift
-		EXT_LDFLAGS="${EXT_LDFLAGS:+$EXT_LDFLAGS }$(parse_option_value "--ext-ldflags" "$@")"
+		BUILDMODE="$(parse_option_value "-buildmode" "$@")"
 		;;
-	-t=* | --targets=*)
-		PLATFORMS="${1#*=}"
-		;;
-	-t | --targets)
+	-buildvcs)
 		shift
-		PLATFORMS="$(parse_option_value "--targets" "$@")"
+		GO_BUILDVCS="$(parse_option_value "-buildvcs" "$@")"
 		;;
-	--cgo-enabled)
+	-compiler)
+		shift
+		GO_COMPILER="$(parse_option_value "-compiler" "$@")"
+		;;
+	-gccgoflags)
+		shift
+		GO_GCCGOFLAGS="$(parse_option_value "-gccgoflags" "$@")"
+		;;
+	-gcflags)
+		shift
+		GO_GCFLAGS="$(parse_option_value "-gcflags" "$@")"
+		;;
+	-installsuffix)
+		shift
+		GO_INSTALLSUFFIX="$(parse_option_value "-installsuffix" "$@")"
+		;;
+	-json)
+		GO_JSON="true"
+		;;
+	-ldflags)
+		shift
+		LDFLAGS="${LDFLAGS:+$LDFLAGS }$(parse_option_value "-ldflags" "$@")"
+		;;
+	-linkshared)
+		GO_LINKSHARED="true"
+		;;
+	-mod)
+		shift
+		GO_MOD="$(parse_option_value "-mod" "$@")"
+		;;
+	-modcacherw)
+		GO_MODCACHERW="true"
+		;;
+	-modfile)
+		shift
+		GO_MODFILE="$(parse_option_value "-modfile" "$@")"
+		;;
+	-overlay)
+		shift
+		GO_OVERLAY="$(parse_option_value "-overlay" "$@")"
+		;;
+	-pgo)
+		shift
+		GO_PGO="$(parse_option_value "-pgo" "$@")"
+		;;
+	-pkgdir)
+		shift
+		GO_PKGDIR="$(parse_option_value "-pkgdir" "$@")"
+		;;
+	-tags)
+		shift
+		# Convert space-separated tags to comma-separated, remove quotes and newlines
+		BUILD_TAGS="$(echo "$BUILD_TAGS $(parse_option_value "-tags" "$@")" | sed 's/^ //g' | sed 's/"//g' | sed 's/\n//g' | tr -s ' ' ',' | sed 's/^,//g' | sed 's/,,*/,/g')"
+		;;
+	-trimpath)
+		GO_TRIMPATH="true"
+		;;
+	-toolexec)
+		shift
+		GO_TOOLEXEC="$(parse_option_value "-toolexec" "$@")"
+		;;
+	# Cross-compilation specific options
+	-bin-name)
+		shift
+		BIN_NAME="$(parse_option_value "-bin-name" "$@")"
+		;;
+	-bin-name-no-suffix)
+		BIN_NAME_NO_SUFFIX="true"
+		;;
+	-cross-compiler-dir)
+		shift
+		CROSS_COMPILER_DIR="$(parse_option_value "-cross-compiler-dir" "$@")"
+		;;
+	-cgo-enabled)
 		CGO_ENABLED="1"
 		;;
-	--cgo-enabled=*)
-		CGO_ENABLED="${1#*=}"
+	-use-gnu-libc)
+		USE_GNU_LIBC="true"
 		;;
-	--apple-simulator)
-		APPLE_SIMULATOR="true"
+	-enable-micro)
+		ENABLE_MICRO="true"
 		;;
-	--result-dir=*)
-		RESULT_DIR="${1#*=}"
-		;;
-	--result-dir)
+	-ext-ldflags)
 		shift
-		RESULT_DIR="$(parse_option_value "--result-dir" "$@")"
+		EXT_LDFLAGS="${EXT_LDFLAGS:+$EXT_LDFLAGS }$(parse_option_value "-ext-ldflags" "$@")"
 		;;
-	--tags=*)
-		BUILD_TAGS="$(echo "$BUILD_TAGS ${1#*=}" | sed 's/^ //g' | sed 's/ //g' | sed 's/"//g' | sed 's/\n//g')"
-		;;
-	--tags)
+	-cc)
 		shift
-		BUILD_TAGS="$(echo "$BUILD_TAGS $(parse_option_value "--tags" "$@")" | sed 's/^ //g' | sed 's/ //g' | sed 's/"//g' | sed 's/\n//g')"
+		CC="$(parse_option_value "-cc" "$@")"
 		;;
-	--show-all-targets)
-		echo "${ALLOWED_PLATFORMS}"
-		exit 0
-		;;
-	--show-all-targets=*)
-		echo "$(expand_targets "${1#*=}")"
-		exit 0
-		;;
-	--github-proxy-mirror=*)
-		GH_PROXY="${1#*=}"
-		;;
-	--github-proxy-mirror)
+	-cxx)
 		shift
-		GH_PROXY="$(parse_option_value "--github-proxy-mirror" "$@")"
+		CXX="$(parse_option_value "-cxx" "$@")"
 		;;
-	--cross-compiler-dir=*)
-		CROSS_COMPILER_DIR="${1#*=}"
-		;;
-	--cross-compiler-dir)
-		shift
-		CROSS_COMPILER_DIR="$(parse_option_value "--cross-compiler-dir" "$@")"
-		;;
-	--cc=*)
-		CC="${1#*=}"
-		;;
-	--cc)
-		shift
-		CC="$(parse_option_value "--cc" "$@")"
-		;;
-	--cxx=*)
-		CXX="${1#*=}"
-		;;
-	--cxx)
-		shift
-		CXX="$(parse_option_value "--cxx" "$@")"
-		;;
-	--use-default-cc-cxx)
+	-use-default-cc-cxx)
 		CC="${DEFAULT_CC}"
 		CXX="${DEFAULT_CXX}"
 		;;
-	--ndk-version=*)
-		NDK_VERSION="${1#*=}"
-		;;
-	--ndk-version)
+	-github-proxy-mirror)
 		shift
-		NDK_VERSION="$(parse_option_value "--ndk-version" "$@")"
+		GH_PROXY="$(parse_option_value "-github-proxy-mirror" "$@")"
 		;;
-	--use-gnu-libc)
-		USE_GNU_LIBC="true"
+	-ndk-version)
+		shift
+		NDK_VERSION="$(parse_option_value "-ndk-version" "$@")"
+		;;
+	-t)
+		shift
+		PLATFORMS="$(parse_option_value "-t" "$@")"
+		;;
+	-result-dir)
+		shift
+		RESULT_DIR="$(parse_option_value "-result-dir" "$@")"
+		;;
+	-show-all-targets)
+		echo "${ALLOWED_PLATFORMS}"
+		exit 0
+		;;
+	-apple-simulator)
+		APPLE_SIMULATOR="true"
 		;;
 	*)
+		# Try to parse dependency args if function exists
 		if declare -f parse_dep_args >/dev/null && parse_dep_args "$1"; then
 			shift
 			continue
 		fi
 		log_error "Invalid option: $1"
+		log_error "Use -h for help"
 		exit 1
 		;;
 	esac
 	shift
 done
+
+# Set PACKAGE variable from collected paths
+if [[ ${#PACKAGE_PATHS[@]} -gt 0 ]]; then
+	PACKAGE="${PACKAGE_PATHS[*]}"
+else
+	set_default "PACKAGE" "${DEFAULT_PACKAGE}"
+fi
 
 # -----------------------------------------------------------------------------
 # Main Execution
