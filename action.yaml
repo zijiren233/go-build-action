@@ -103,6 +103,90 @@ inputs:
   work:
     description: "print the name of the temporary work directory and do not delete it when exiting."
     required: false
+  p:
+    description: "the number of programs that can be run in parallel."
+    required: false
+  msan:
+    description: "enable interoperation with memory sanitizer."
+    required: false
+  asan:
+    description: "enable interoperation with address sanitizer."
+    required: false
+  cover:
+    description: "enable code coverage instrumentation."
+    required: false
+  covermode:
+    description: "set the mode for coverage analysis (set, count, atomic)."
+    required: false
+  coverpkg:
+    description: "apply coverage analysis to packages matching pattern."
+    required: false
+  asmflags:
+    description: "arguments to pass on each go tool asm invocation."
+    required: false
+  buildvcs:
+    description: "whether to stamp binaries with version control information."
+    required: false
+  compiler:
+    description: "name of compiler to use (gccgo or gc)."
+    required: false
+  gccgoflags:
+    description: "arguments to pass on each gccgo compiler/linker invocation."
+    required: false
+  gcflags:
+    description: "arguments to pass on each go tool compile invocation."
+    required: false
+  installsuffix:
+    description: "a suffix to use in the name of the package installation directory."
+    required: false
+  json:
+    description: "emit build output in JSON format."
+    required: false
+  linkshared:
+    description: "build code that will be linked against shared libraries."
+    required: false
+  mod:
+    description: "module download mode (readonly, vendor, or mod)."
+    required: false
+  modcacherw:
+    description: "leave newly-created directories in the module cache read-write."
+    required: false
+  modfile:
+    description: "read an alternate go.mod file."
+    required: false
+  overlay:
+    description: "read a JSON config file that provides an overlay for build operations."
+    required: false
+  pgo:
+    description: "specify the file path of a profile for profile-guided optimization."
+    required: false
+  pkgdir:
+    description: "install and load all packages from dir."
+    required: false
+  trimpath:
+    description: "remove all file system paths from the resulting executable."
+    required: false
+  toolexec:
+    description: "a program to use to invoke toolchain programs."
+    required: false
+  change-dir:
+    description: "change to dir before running the command."
+    required: false
+  use-gnu-libc:
+    description: "use GNU libc instead of musl for Linux targets."
+    required: false
+  apple-simulator:
+    description: "build for Apple simulator (iOS/tvOS/watchOS)."
+    required: false
+  api:
+    description: "Android API level for Android builds (default: 24)."
+    required: false
+  cgo-deps-version:
+    description: "CGO dependencies version."
+    required: false
+  package:
+    description: "package path to build (default: current directory)."
+    required: false
   config-args:
     description: "Additional build configuration arguments"
     required: false
@@ -157,5 +241,33 @@ runs:
         GO_X: ${{ inputs.x }}
         GO_V: ${{ inputs.v }}
         GO_WORK: ${{ inputs.work }}
+        GO_P: ${{ inputs.p }}
+        GO_MSAN: ${{ inputs.msan }}
+        GO_ASAN: ${{ inputs.asan }}
+        GO_COVER: ${{ inputs.cover }}
+        GO_COVERMODE: ${{ inputs.covermode }}
+        GO_COVERPKG: ${{ inputs.coverpkg }}
+        GO_ASMFLAGS: ${{ inputs.asmflags }}
+        GO_BUILDVCS: ${{ inputs.buildvcs }}
+        GO_COMPILER: ${{ inputs.compiler }}
+        GO_GCCGOFLAGS: ${{ inputs.gccgoflags }}
+        GO_GCFLAGS: ${{ inputs.gcflags }}
+        GO_INSTALLSUFFIX: ${{ inputs.installsuffix }}
+        GO_JSON: ${{ inputs.json }}
+        GO_LINKSHARED: ${{ inputs.linkshared }}
+        GO_MOD: ${{ inputs.mod }}
+        GO_MODCACHERW: ${{ inputs.modcacherw }}
+        GO_MODFILE: ${{ inputs.modfile }}
+        GO_OVERLAY: ${{ inputs.overlay }}
+        GO_PGO: ${{ inputs.pgo }}
+        GO_PKGDIR: ${{ inputs.pkgdir }}
+        GO_TRIMPATH: ${{ inputs.trimpath }}
+        GO_TOOLEXEC: ${{ inputs.toolexec }}
+        GO_CHANGE_DIR: ${{ inputs.change-dir }}
+        USE_GNU_LIBC: ${{ inputs.use-gnu-libc }}
+        APPLE_SIMULATOR: ${{ inputs.apple-simulator }}
+        API: ${{ inputs.api }}
+        CGO_DEPS_VERSION: ${{ inputs.cgo-deps-version }}
+        PACKAGE: ${{ inputs.package }}
       run: |
         "${{ github.action_path }}/cross.sh" ${{ inputs.config-args }}

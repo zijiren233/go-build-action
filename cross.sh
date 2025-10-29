@@ -437,10 +437,10 @@ expand_targets() {
 
 # Resets CGO environment variables
 reset_cgo() {
-	_CC=""
-	_CXX=""
+	TARGET_CC=""
+	TARGET_CXX=""
 	MORE_CGO_CFLAGS=""
-	MORE_CGO_CXXFLAGS=""
+	MORE_CGOTARGET_CXXFLAGS=""
 	MORE_CGO_LDFLAGS=""
 	EXTRA_PATH=""
 	EXTRA_LIBRARY_PATH=""
@@ -449,22 +449,22 @@ reset_cgo() {
 # Converts relative CC/CXX paths to absolute paths
 abs_cc_cxx() {
 	local cc_command cc_options
-	read -r cc_command cc_options <<<"${_CC}"
-	_CC="$(command -v "${cc_command}")" || return 2
-	[[ -n "${cc_options}" ]] && _CC="${_CC} ${cc_options}"
+	read -r cc_command cc_options <<<"${TARGET_CC}"
+	TARGET_CC="$(command -v "${cc_command}")" || return 2
+	[[ -n "${cc_options}" ]] && TARGET_CC="${TARGET_CC} ${cc_options}"
 
 	local cxx_command cxx_options
-	read -r cxx_command cxx_options <<<"${_CXX}"
-	_CXX="$(command -v "${cxx_command}")" || return 2
-	[[ -n "${cxx_options}" ]] && _CXX="${_CXX} ${cxx_options}"
+	read -r cxx_command cxx_options <<<"${TARGET_CXX}"
+	TARGET_CXX="$(command -v "${cxx_command}")" || return 2
+	[[ -n "${cxx_options}" ]] && TARGET_CXX="${TARGET_CXX} ${cxx_options}"
 
 	return 0
 }
 
 # Initializes CGO dependencies for the host target
 init_host_cgo_deps() {
-	_CC="${HOST_CC}"
-	_CXX="${HOST_CXX}"
+	TARGET_CC="${HOSTTARGET_CC}"
+	TARGET_CXX="${HOSTTARGET_CXX}"
 }
 
 # Initializes CGO dependencies based on the target operating system and architecture
@@ -484,25 +484,23 @@ init_cgo_deps() {
 
 	local cc_var="CC_FOR_${goos}_${goarch}"
 	local cxx_var="CXX_FOR_${goos}_${goarch}"
-	_CC=${CC_FOR_TARGET}
-	_CXX=${CXX_FOR_TARGET}
+	TARGET_CC=${CC_FOR_TARGET}
+	TARGET_CXX=${CXX_FOR_TARGET}
 
-	if [[ -n "${_CC}" ]] && [[ -n "${_CXX}" ]]; then
-		_CC=${CC_FOR_TARGET}
-		_CXX=${CXX_FOR_TARGET}
+	if [[ -n "${TARGET_CC}" ]] && [[ -n "${TARGET_CXX}" ]]; then
+		TARGET_CC=${CC_FOR_TARGET}
+		TARGET_CXX=${CXX_FOR_TARGET}
 	fi
 
-	if [[ -n "${_CC}" ]] && [[ -n "${_CXX}" ]]; then
-		_CC="${_CC}"
-		_CXX="${_CXX}"
-		abs_cc_cxx || return $?
+	if [[ -n "${TARGET_CC}" ]] && [[ -n "${TARGET_CXX}" ]]; then
+		TARGET_CC="${TARGET_CC}"
+		TARGET_CXX="${TARGET_CXX}"
 		return 0
 	fi
 
 	if [[ -n "${CC}" ]] && [[ -n "${CXX}" ]]; then
-		_CC="${CC}"
-		_CXX="${CXX}"
-		abs_cc_cxx || return $?
+		TARGET_CC="${CC}"
+		TARGET_CXX="${CXX}"
 		return 0
 	elif [[ -n "${CC}" ]] || [[ -n "${CXX}" ]]; then
 		log_error "Both CC and CXX must be set at the same time."
@@ -510,8 +508,6 @@ init_cgo_deps() {
 	fi
 
 	init_default_cgo_deps "$@" || return $?
-
-	PATH=${EXTRA_PATH:+$EXTRA_PATH:}$PATH abs_cc_cxx || return $?
 
 	return 0
 }
@@ -761,8 +757,8 @@ init_ios_native_cgo() {
 		;;
 	esac
 
-	_CC="clang -arch ${arch_name} -${min_version} -isysroot ${sdk_path}"
-	_CXX="clang++ -arch ${arch_name} -${min_version} -isysroot ${sdk_path}"
+	TARGET_CC="clang -arch ${arch_name} -${min_version} -isysroot ${sdk_path}"
+	TARGET_CXX="clang++ -arch ${arch_name} -${min_version} -isysroot ${sdk_path}"
 }
 
 # Initializes iOS CGO for cross-compilation from Linux
@@ -856,8 +852,8 @@ setup_existing_ios_cross_compiler() {
 	local cross_compiler_name="$1"
 	local compiler_prefix="$2"
 
-	_CC="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix}-clang"
-	_CXX="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix}-clang++"
+	TARGET_CC="${compiler_prefix}-clang"
+	TARGET_CXX="${compiler_prefix}-clang++"
 	EXTRA_PATH="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin:${CROSS_COMPILER_DIR}/${cross_compiler_name}/clang/bin"
 	fix_darwin_linker_rpath "${CROSS_COMPILER_DIR}/${cross_compiler_name}" "${compiler_prefix%%-*}"
 }
@@ -912,12 +908,12 @@ init_osx_native_cgo() {
 
 	case "${goarch}" in
 	"amd64")
-		_CC="clang -arch x86_64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
-		_CXX="clang++ -arch x86_64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
+		TARGET_CC="clang -arch x86_64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
+		TARGET_CXX="clang++ -arch x86_64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
 		;;
 	"arm64")
-		_CC="clang -arch arm64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
-		_CXX="clang++ -arch arm64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
+		TARGET_CC="clang -arch arm64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
+		TARGET_CXX="clang++ -arch arm64 -mmacosx-version-min=10.11 -isysroot ${sdk_path}"
 		;;
 	*)
 		log_warning "Unknown darwin architecture: ${goarch}"
@@ -953,8 +949,8 @@ setup_existing_osx_cross_compiler() {
 	local cross_compiler_name="$1"
 	local compiler_prefix="$2"
 
-	_CC="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix}-clang"
-	_CXX="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin/${compiler_prefix}-clang++"
+	TARGET_CC="${compiler_prefix}-clang"
+	TARGET_CXX="${compiler_prefix}-clang++"
 	EXTRA_PATH="${CROSS_COMPILER_DIR}/${cross_compiler_name}/bin:${CROSS_COMPILER_DIR}/${cross_compiler_name}/clang/bin"
 	fix_darwin_linker_rpath "${CROSS_COMPILER_DIR}/${cross_compiler_name}" "${compiler_prefix%%-*}"
 }
@@ -996,8 +992,9 @@ init_linux_cgo() {
 	# Check if compiler exists in cross compiler directory
 	local compiler_dir="${CROSS_COMPILER_DIR}/${cross_compiler_name}"
 	if [[ -x "${compiler_dir}/bin/${gcc_name}" ]] && [[ -x "${compiler_dir}/bin/${gxx_name}" ]]; then
-		_CC="${compiler_dir}/bin/${gcc_name} -static --static"
-		_CXX="${compiler_dir}/bin/${gxx_name} -static --static"
+		TARGET_CC="${gcc_name} -static --static"
+		TARGET_CXX="${gxx_name} -static --static"
+		EXTRA_PATH="${compiler_dir}/bin"
 		return 0
 	fi
 
@@ -1006,8 +1003,9 @@ init_linux_cgo() {
 	local download_url="${GH_PROXY}https://github.com/zijiren233/musl-cross-make/releases/download/${CGO_DEPS_VERSION}/${cross_compiler_name}-${GOHOSTOS}-${host_arch}.tgz"
 	download_and_extract "${download_url}" "${compiler_dir}" || return 2
 
-	_CC="${compiler_dir}/bin/${gcc_name} -static --static"
-	_CXX="${compiler_dir}/bin/${gxx_name} -static --static"
+	TARGET_CC="${gcc_name} -static --static"
+	TARGET_CXX="${gxx_name} -static --static"
+	EXTRA_PATH="${compiler_dir}/bin"
 }
 
 # -----------------------------------------------------------------------------
@@ -1026,8 +1024,9 @@ init_windows_cgo() {
 	# Check if compiler exists in cross compiler directory
 	local compiler_dir="${CROSS_COMPILER_DIR}/${cross_compiler_name}"
 	if [[ -x "${compiler_dir}/bin/${gcc_name}" ]] && [[ -x "${compiler_dir}/bin/${gxx_name}" ]]; then
-		_CC="${compiler_dir}/bin/${gcc_name} -static --static"
-		_CXX="${compiler_dir}/bin/${gxx_name} -static --static"
+		TARGET_CC="${gcc_name} -static --static"
+		TARGET_CXX="${gxx_name} -static --static"
+		EXTRA_PATH="${compiler_dir}/bin"
 		return 0
 	fi
 
@@ -1036,8 +1035,9 @@ init_windows_cgo() {
 	local download_url="${GH_PROXY}https://github.com/zijiren233/musl-cross-make/releases/download/${CGO_DEPS_VERSION}/${cross_compiler_name}-${GOHOSTOS}-${host_arch}.tgz"
 	download_and_extract "${download_url}" "${compiler_dir}" || return 2
 
-	_CC="${compiler_dir}/bin/${gcc_name} -static --static"
-	_CXX="${compiler_dir}/bin/${gxx_name} -static --static"
+	TARGET_CC="${gcc_name} -static --static"
+	TARGET_CXX="${gxx_name} -static --static"
+	EXTRA_PATH="${compiler_dir}/bin"
 }
 
 # -----------------------------------------------------------------------------
@@ -1102,8 +1102,9 @@ init_freebsd_cgo() {
 	# Check if compiler exists in cross compiler directory
 	local compiler_dir="${CROSS_COMPILER_DIR}/${cross_compiler_name}"
 	if [[ -x "${compiler_dir}/bin/${gcc_name}" ]] && [[ -x "${compiler_dir}/bin/${gxx_name}" ]]; then
-		_CC="${compiler_dir}/bin/${gcc_name}"
-		_CXX="${compiler_dir}/bin/${gxx_name}"
+		TARGET_CC="${gcc_name}"
+		TARGET_CXX="${gxx_name}"
+		EXTRA_PATH="${compiler_dir}/bin"
 		return 0
 	fi
 
@@ -1112,8 +1113,9 @@ init_freebsd_cgo() {
 	local download_url="${GH_PROXY}https://github.com/zijiren233/musl-cross-make/releases/download/${CGO_DEPS_VERSION}/${cross_compiler_name}-${GOHOSTOS}-${host_arch}.tgz"
 	download_and_extract "${download_url}" "${compiler_dir}" || return 2
 
-	_CC="${compiler_dir}/bin/${gcc_name}"
-	_CXX="${compiler_dir}/bin/${gxx_name}"
+	TARGET_CC="${gcc_name}"
+	TARGET_CXX="${gxx_name}"
+	EXTRA_PATH="${compiler_dir}/bin"
 }
 
 # -----------------------------------------------------------------------------
@@ -1135,8 +1137,6 @@ init_android_ndk() {
 	local clang_base_dir="${ndk_dir}/toolchains/llvm/prebuilt/${GOHOSTOS}-${ndk_host_arch}/bin"
 
 	local clang_prefix="$(get_android_clang "${goarch}")"
-	_CC="${clang_base_dir}/${clang_prefix}-clang"
-	_CXX="${clang_base_dir}/${clang_prefix}-clang++"
 
 	if [[ ! -d "${ndk_dir}" ]]; then
 		local ndk_url="https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-${GOHOSTOS}.zip"
@@ -1145,12 +1145,16 @@ init_android_ndk() {
 		rmdir "$ndk_dir/android-ndk-${NDK_VERSION}" || return 2
 	fi
 
-	if [[ ! -x "${_CC}" ]] || [[ ! -x "${_CXX}" ]]; then
+	if [[ ! -x "${clang_base_dir}/${clang_prefix}-clang" ]] || [[ ! -x "${clang_base_dir}/${clang_prefix}-clang++" ]]; then
 		log_error "Android NDK not found or invalid. Please check the NDK_VERSION environment variable."
-		log_error "Expected CC: ${_CC}"
-		log_error "Expected CXX: ${_CXX}"
+		log_error "Expected CC: ${clang_base_dir}/${clang_prefix}-clang"
+		log_error "Expected CXX: ${clang_base_dir}/${clang_prefix}-clang++"
 		return 2
 	fi
+
+	TARGET_CC="${clang_prefix}-clang"
+	TARGET_CXX="${clang_prefix}-clang++"
+	EXTRA_PATH="${clang_base_dir}"
 }
 
 # Gets the Clang host prefix for Android NDK
@@ -1499,10 +1503,10 @@ build_target_with_micro() {
 		case "$code" in
 		0)
 			build_env+=("CGO_ENABLED=1")
-			build_env+=("CC=${_CC}")
-			build_env+=("CXX=${_CXX}")
+			build_env+=("CC=${TARGET_CC}")
+			build_env+=("CXX=${TARGET_CXX}")
 			build_env+=("CGO_CFLAGS=${CGO_FLAGS}${MORE_CGO_CFLAGS:+ ${MORE_CGO_CFLAGS}}")
-			build_env+=("CGO_CXXFLAGS=${CGO_FLAGS}${MORE_CGO_CXXFLAGS:+ ${MORE_CGO_CXXFLAGS}}")
+			build_env+=("CGOTARGET_CXXFLAGS=${CGO_FLAGS}${MORE_CGOTARGET_CXXFLAGS:+ ${MORE_CGOTARGET_CXXFLAGS}}")
 			build_env+=("CGO_LDFLAGS=${CGO_LDFLAGS}${MORE_CGO_LDFLAGS:+ ${MORE_CGO_LDFLAGS}}")
 			;;
 		*)
